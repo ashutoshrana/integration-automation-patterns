@@ -1,0 +1,11 @@
+name: lead-to-case-sync
+description: Reference event flow for synchronizing operational events into a system of record.
+steps:
+  - emit_event: lead_created
+  - validate_payload: true
+  - map_fields: lead_to_case_schema
+  - deduplicate_on: external_event_id
+  - create_or_update_case: true
+  - log_action: true
+  - emit_follow_up_task_if_missing_data: true
+  - publish_metrics: true
