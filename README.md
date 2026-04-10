@@ -25,6 +25,7 @@ This repo focuses on:
 ## Initial repository structure
 
 - `docs/architecture.md`
+- `docs/implementation-note-01.md`
 - `docs/adr/`
 - `examples/event-flow.yaml`
 - `CONTRIBUTING.md`
@@ -36,6 +37,10 @@ This repo focuses on:
 - add examples for retry-safe event handling
 - document action logging and audit boundaries
 - add reference patterns for CRM, ERP, and service-platform synchronization
+
+## Published notes
+
+- implementation note: [`docs/implementation-note-01.md`](./docs/implementation-note-01.md)
 
 ## Intended audience
 
