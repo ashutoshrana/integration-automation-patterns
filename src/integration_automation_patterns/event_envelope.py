@@ -82,7 +82,7 @@ class RetryPolicy:
         """
         if not self.exponential:
             return self.backoff_seconds
-        delay = self.backoff_seconds * (2 ** attempt_number)
+        delay: int = int(self.backoff_seconds * (2 ** attempt_number))
         return min(delay, self.max_backoff_seconds)
 
     def is_exhausted(self, attempt_number: int) -> bool:
