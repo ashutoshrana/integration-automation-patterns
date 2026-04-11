@@ -6,6 +6,57 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.0] — 2026-04-11
+
+### Added
+
+**Resilience patterns:**
+- `circuit_breaker.py` — thread-safe circuit breaker with CLOSED/OPEN/HALF_OPEN state machine:
+  - `CircuitBreaker` — configurable failure threshold, recovery timeout, half-open probe
+  - `CircuitState` — CLOSED, OPEN, HALF_OPEN with automatic transitions
+  - `CircuitBreakerStats` — snapshot of failure count, state, and last failure time
+  - `CircuitOpenError` — raised when calls are rejected in OPEN state
+  - `.call` decorator for transparent wrapping
+- `saga.py` — distributed saga orchestrator for multi-step workflows:
+  - `SagaOrchestrator` — forward execution + automatic backward compensation on failure
+  - `SagaStep` — named step with `action` and `compensate` callables
+  - `SagaResult` — succeeded flag, failed_step name, compensated_steps list, per-step results
+  - Fluent `.add_step()` chaining API
+
+**Messaging patterns:**
+- `outbox.py` — transactional outbox for at-least-once event delivery:
+  - `OutboxRecord` — pending outbox entry with UUID, aggregate_id, event_type, payload
+  - `OutboxProcessor` — broker-agnostic relay: fetch_pending → publish → mark_published/mark_failed
+  - `process_batch()` returns (published_count, failed_count) tuple
+- `kafka_envelope.py` — Kafka-aware event envelope:
+  - `KafkaEventEnvelope` — partition key, topic, schema version, DLQ routing
+  - `.to_producer_record()` — serialised to `{topic, key, value: bytes, headers}`
+  - `.from_consumer_record()` — deserialise from consumed record
+  - `.mark_dead_letter(reason)` — immutable copy routed to `<topic>.dlq`
+- `webhook_handler.py` — HMAC-SHA256 signed webhook verification:
+  - `WebhookHandler` — validates `sha256=<hex>`, `v1=<hex>`, and `t=<ts>,v1=<hex>` formats
+  - `WebhookEvent` — typed, verified event with event_id, event_type, payload, raw bytes
+  - `WebhookSignatureError` / `WebhookReplayError` — specific error classes
+
+**Database change capture:**
+- `cdc_event.py` — Change Data Capture event envelope:
+  - `CDCEvent` — typed CDC record with operation, source metadata, before/after snapshots
+  - `CDCOperation` — INSERT, UPDATE, DELETE, SNAPSHOT, TRUNCATE
+  - `CDCSourceMetadata` — database, schema, table, connector, LSN, server_id
+  - `.from_debezium()` — parse standard Debezium envelope format
+  - `.changed_fields()` — set of field names that differ between before/after
+  - `.to_audit_dict()` — JSON-serialisable audit record
+
+**OSS infrastructure:**
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1
+- `ECOSYSTEM.md` — integration map across message brokers, CDC connectors, and frameworks
+- Issue templates: new-pattern, new-framework-integration
+
+### Changed
+- `pyproject.toml` → version `0.2.0`; added `kafka` optional dependency group; expanded keywords
+
+---
+
 ## [0.1.0] — 2026-04-11
 
 ### Added

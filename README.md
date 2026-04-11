@@ -32,39 +32,49 @@ The patterns do not assume any specific vendor, broker, or cloud platform.
 
 ## Modules
 
-- `event_envelope.py`
-  Reliable event transport with explicit delivery status, bounded retry policy,
-  and structured audit logging. Works with any message broker (Kafka, SQS,
-  Azure Service Bus, GCP Pub/Sub, RabbitMQ, IBM MQ, and others).
+**Core reliability:**
+- `event_envelope.py` — reliable event transport with explicit delivery status, bounded retry, and audit logging. Works with any broker (Kafka, SQS, Azure Service Bus, GCP Pub/Sub, RabbitMQ).
+- `sync_boundary.py` — bi-directional system-of-record sync with field-level authority assignment, conflict detection, and exclusion management.
 
-- `sync_boundary.py`
-  System-of-record synchronization contracts for bi-directional integration
-  between enterprise platforms. Explicit field-level authority assignment,
-  conflict detection, and exclusion management. Platform-agnostic.
+**Resilience patterns (v0.2.0):**
+- `circuit_breaker.py` — thread-safe CLOSED/OPEN/HALF_OPEN state machine with automatic recovery probing and `.call` decorator.
+- `saga.py` — distributed saga orchestrator: forward execution with automatic backward compensation on failure, fluent `.add_step()` API.
+
+**Messaging patterns (v0.2.0):**
+- `outbox.py` — transactional outbox for at-least-once delivery: write events in the same DB transaction, relay separately.
+- `kafka_envelope.py` — Kafka-aware envelope: partition key routing, schema version, DLQ routing, producer/consumer roundtrip serialization.
+- `webhook_handler.py` — HMAC-SHA256 webhook verification compatible with GitHub, Stripe, Salesforce, and ServiceNow signature formats.
+
+**Change Data Capture (v0.2.0):**
+- `cdc_event.py` — typed CDC event envelope: INSERT/UPDATE/DELETE/SNAPSHOT/TRUNCATE, Debezium format parsing, changed-field diff, audit dict.
+
+## Ecosystem
+
+See [ECOSYSTEM.md](./ECOSYSTEM.md) for full broker, connector, and framework coverage matrix.
 
 ## Repository structure
 
-- `src/integration_automation_patterns/`
-  - `event_envelope.py` — event transport with retry and audit
-  - `sync_boundary.py` — bi-directional sync authority boundaries
-- `docs/architecture.md`
-- `docs/implementation-note-01.md`
-- `docs/adr/`
-- `examples/event-flow.yaml`
-- `CITATION.cff`
-- `CONTRIBUTING.md`
-- `GOVERNANCE.md`
-
-## Near-term roadmap
-
-- add integration reliability ADRs
-- add examples for retry-safe event handling across broker types
-- document action logging and audit boundaries
-- add workflow orchestration boundary patterns
+```
+src/integration_automation_patterns/
+├── event_envelope.py         # Reliable event transport + retry
+├── sync_boundary.py          # Bi-directional SOR sync
+├── circuit_breaker.py        # CLOSED/OPEN/HALF_OPEN state machine
+├── saga.py                   # Distributed saga orchestrator
+├── outbox.py                 # Transactional outbox pattern
+├── kafka_envelope.py         # Kafka-aware event envelope
+├── webhook_handler.py        # HMAC-SHA256 webhook verification
+└── cdc_event.py              # Change Data Capture event types
+docs/
+├── architecture.md
+├── implementation-note-01.md
+├── implementation-note-02.md
+└── adr/
+```
 
 ## Published notes
 
-- implementation note: [`docs/implementation-note-01.md`](./docs/implementation-note-01.md)
+- [`docs/implementation-note-01.md`](./docs/implementation-note-01.md) — event-driven integration reliability
+- [`docs/implementation-note-02.md`](./docs/implementation-note-02.md) — idempotency in enterprise event processing
 
 ## Intended audience
 
