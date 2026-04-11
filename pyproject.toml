@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "integration-automation-patterns"
+version = "0.1.0"
+description = "Reference patterns for reliable enterprise integration, workflow automation, and system-of-record synchronization."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Ashutosh Rana" }
+]
+keywords = [
+  "enterprise-integration",
+  "event-driven",
+  "workflow-automation",
+  "crm",
+  "erp",
+  "idempotency",
+  "system-of-record",
+  "integration-patterns",
+  "enterprise-architecture",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Distributed Computing",
+  "Topic :: Office/Business",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ashutoshrana/integration-automation-patterns"
+Issues = "https://github.com/ashutoshrana/integration-automation-patterns/issues"
+Changelog = "https://github.com/ashutoshrana/integration-automation-patterns/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-cov>=4.0"]
+lint = ["ruff>=0.4.0"]
+typecheck = ["mypy>=1.0"]
+dev = [
+  "integration-automation-patterns[test,lint,typecheck]",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
