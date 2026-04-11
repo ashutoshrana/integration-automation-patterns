@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use these patterns in your work, please cite using the metadata below."
+type: software
+title: "integration-automation-patterns: Enterprise Integration and Workflow Automation Patterns"
+abstract: >
+  Reference implementation of enterprise integration patterns for reliable
+  event-driven integration, system-of-record synchronization, and workflow
+  orchestration. Includes explicit retry policy modeling, bi-directional
+  sync authority boundaries, conflict detection, and structured audit logging.
+  Cloud-agnostic and platform-agnostic.
+authors:
+  - family-names: "Rana"
+    given-names: "Ashutosh"
+    affiliation: "CherryRoad Technologies"
+repository-code: "https://github.com/ashutoshrana/integration-automation-patterns"
+license: MIT
+keywords:
+  - enterprise-integration
+  - workflow-automation
+  - event-driven
+  - system-of-record
+  - crm
+  - erp
+  - integration-patterns
+  - enterprise-architecture
+date-released: "2026-04-11"

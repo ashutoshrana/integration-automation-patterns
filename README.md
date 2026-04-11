@@ -11,32 +11,50 @@ Enterprise modernization usually breaks down at the integration layer:
 - workflow logic scattered across tools
 - poor visibility into operational state
 
-This repository is a public-safe reference point for patterns that help teams build more reliable integration and automation systems.
+This repository is a public-safe reference for patterns that help teams build more reliable integration and automation systems. The patterns are platform-agnostic and cloud-agnostic — applicable across any combination of CRM, ERP, ITSM, and custom services, on any cloud environment (AWS, GCP, Azure, OCI) or on-premises.
 
 ## Scope
 
 This repo focuses on:
-- event-driven integration patterns
-- workflow orchestration boundaries
-- system-of-record synchronization
+- event-driven integration patterns with explicit retry and idempotency models
+- system-of-record synchronization with authority boundaries
+- workflow orchestration and escalation boundaries
 - observability for automation flows
 - public-safe architecture notes for enterprise operations
 
-## Initial repository structure
+The patterns do not assume any specific vendor, broker, or cloud platform.
 
+## Modules
+
+- `event_envelope.py`
+  Reliable event transport with explicit delivery status, bounded retry policy,
+  and structured audit logging. Works with any message broker (Kafka, SQS,
+  Azure Service Bus, GCP Pub/Sub, RabbitMQ, IBM MQ, and others).
+
+- `sync_boundary.py`
+  System-of-record synchronization contracts for bi-directional integration
+  between enterprise platforms. Explicit field-level authority assignment,
+  conflict detection, and exclusion management. Platform-agnostic.
+
+## Repository structure
+
+- `src/integration_automation_patterns/`
+  - `event_envelope.py` — event transport with retry and audit
+  - `sync_boundary.py` — bi-directional sync authority boundaries
 - `docs/architecture.md`
 - `docs/implementation-note-01.md`
 - `docs/adr/`
 - `examples/event-flow.yaml`
+- `CITATION.cff`
 - `CONTRIBUTING.md`
 - `GOVERNANCE.md`
 
 ## Near-term roadmap
 
 - add integration reliability ADRs
-- add examples for retry-safe event handling
+- add examples for retry-safe event handling across broker types
 - document action logging and audit boundaries
-- add reference patterns for CRM, ERP, and service-platform synchronization
+- add workflow orchestration boundary patterns
 
 ## Published notes
 
@@ -47,4 +65,8 @@ This repo focuses on:
 - enterprise architects
 - integration engineers
 - workflow and automation operators
-- platform teams responsible for system-of-record reliability
+- platform teams responsible for system-of-record reliability across CRM, ERP, and service platforms
+
+## Citing this work
+
+If you use these patterns in your work, see `CITATION.cff` or use GitHub's "Cite this repository" button above.
