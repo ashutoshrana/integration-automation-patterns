@@ -2,8 +2,6 @@
 
 from datetime import datetime, timezone
 
-import pytest
-
 from integration_automation_patterns.sync_boundary import (
     RecordAuthority,
     SyncBoundary,

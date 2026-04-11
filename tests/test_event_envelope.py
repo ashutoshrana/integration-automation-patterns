@@ -1,13 +1,11 @@
 """Tests for integration_automation_patterns.event_envelope."""
 
-import pytest
 
 from integration_automation_patterns.event_envelope import (
     DeliveryStatus,
     EventEnvelope,
     RetryPolicy,
 )
-
 
 # ---------------------------------------------------------------------------
 # RetryPolicy
