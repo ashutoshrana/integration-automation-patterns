@@ -75,3 +75,13 @@ The patterns do not assume any specific vendor, broker, or cloud platform.
 ## Citing this work
 
 If you use these patterns in your work, see `CITATION.cff` or use GitHub's "Cite this repository" button above.
+
+---
+
+## Part of the enterprise AI patterns trilogy
+
+| Library | Focus | Regulation |
+|---------|-------|-----------|
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | FERPA identity-scoped RAG |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | FERPA, HIPAA, GLBA policy enforcement |
+| **integration-automation-patterns** | How data flows | Event-driven enterprise integration |
