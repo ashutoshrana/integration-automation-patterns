@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml/badge.svg)](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
 Practical patterns for enterprise integration, workflow orchestration, and system-of-record synchronization in complex operating environments.
