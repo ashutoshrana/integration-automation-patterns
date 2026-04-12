@@ -1,0 +1,26 @@
+"type/feature":
+  - changed-files:
+    - any-glob-to-any-file: "src/**"
+
+"type/test":
+  - changed-files:
+    - any-glob-to-any-file: "tests/**"
+
+"type/docs":
+  - changed-files:
+    - any-glob-to-any-file:
+        - "docs/**"
+        - "*.md"
+        - "CONTRIBUTING.md"
+        - "README.md"
+
+"type/ci":
+  - changed-files:
+    - any-glob-to-any-file: ".github/**"
+
+"type/build":
+  - changed-files:
+    - any-glob-to-any-file:
+        - "pyproject.toml"
+        - "setup.py"
+        - ".pre-commit-config.yaml"
