@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.3.0] — 2026-04-12
+
+### Added
+- Enhanced CI: coverage reporting (Codecov), ruff format check, build-check job, pip cache, concurrency cancellation
+- Automation: PR auto-labeler, stale bot, Conventional Commits PR title check, first-contributor welcome bot
+- Dependabot weekly pip + Actions updates; CODEOWNERS; SECURITY.md; pre-commit config
+- `http/webhook_handler.py`: `IdempotentWebhookReceiver` — HMAC validation, idempotency key extraction, bounded LRU duplicate cache
+- ADRs: `docs/adr/001-idempotency-key-as-event-id.md`, `002-explicit-field-authority-model.md`, `003-saga-choreography-vs-orchestration.md`
+- README: badges, ASCII pipeline diagram, pattern catalog table, quickstart, BibTeX citation
+- GitHub Discussions enabled; 22 standardized labels; milestones v0.3.0 + v1.0.0
+
+---
+
 ## [0.2.0] — 2026-04-11
 
 ### Added
