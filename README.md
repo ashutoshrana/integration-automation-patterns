@@ -1,91 +1,158 @@
 # integration-automation-patterns
 
 [![CI](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml/badge.svg)](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
-![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
+[![Python](https://img.shields.io/pypi/pyversions/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)]
 
-Practical patterns for enterprise integration, workflow orchestration, and system-of-record synchronization in complex operating environments.
+---
 
-## Why this repo exists
+## The problem this solves
 
-Enterprise modernization usually breaks down at the integration layer:
-- brittle handoffs between systems
-- inconsistent event handling
-- weak retry and idempotency models
-- workflow logic scattered across tools
-- poor visibility into operational state
+Enterprise systems that span CRM + ERP + messaging fail in predictable ways: duplicate event processing, partial transaction failures, and lost messages under retry. This library provides reference implementations of the patterns that solve these problems structurally — idempotent event envelopes, field-level authority boundaries, distributed saga orchestration, and transactional outbox — so integration logic is explicit, testable, and broker-agnostic.
 
-This repository is a public-safe reference for patterns that help teams build more reliable integration and automation systems. The patterns are platform-agnostic and cloud-agnostic — applicable across any combination of CRM, ERP, ITSM, and custom services, on any cloud environment (AWS, GCP, Azure, OCI) or on-premises.
+---
 
-## Scope
+## Architecture
 
-This repo focuses on:
-- event-driven integration patterns with explicit retry and idempotency models
-- system-of-record synchronization with authority boundaries
-- workflow orchestration and escalation boundaries
-- observability for automation flows
-- public-safe architecture notes for enterprise operations
+```
+Inbound Event
+     │
+     ▼
+EventEnvelope
+(event_id, idempotency_key, source, schema_version, metadata)
+     │
+     ├─ Duplicate Check ──────────────────────────────────────────┐
+     │   event_id already processed? → skip, return cached result │
+     │                                                             │
+     ├─ Authority Check ──────────────────────────────────────────┤
+     │   SyncBoundary.detect_conflict()                           │
+     │   Which system owns this field?                            │
+     │   Conflict → raise ConflictError, log authority boundary   │
+     │                                                             │
+     ├─ Retry Policy ─────────────────────────────────────────────┤
+     │   Exponential backoff, max attempts                        │
+     │   CircuitBreaker: CLOSED → OPEN → HALF_OPEN recovery       │
+     │                                                             │
+     └─ Outbox → DB Transaction → Reliable Publish ───────────────┘
+         Write event in same DB tx as domain change
+         Relay process delivers to broker independently
+```
 
-The patterns do not assume any specific vendor, broker, or cloud platform.
+---
 
-## Modules
+## Installation
 
-**Core reliability:**
-- `event_envelope.py` — reliable event transport with explicit delivery status, bounded retry, and audit logging. Works with any broker (Kafka, SQS, Azure Service Bus, GCP Pub/Sub, RabbitMQ).
-- `sync_boundary.py` — bi-directional system-of-record sync with field-level authority assignment, conflict detection, and exclusion management.
+```bash
+pip install integration-automation-patterns
+```
 
-**Resilience patterns (v0.2.0):**
-- `circuit_breaker.py` — thread-safe CLOSED/OPEN/HALF_OPEN state machine with automatic recovery probing and `.call` decorator.
-- `saga.py` — distributed saga orchestrator: forward execution with automatic backward compensation on failure, fluent `.add_step()` API.
+---
 
-**Messaging patterns (v0.2.0):**
-- `outbox.py` — transactional outbox for at-least-once delivery: write events in the same DB transaction, relay separately.
-- `kafka_envelope.py` — Kafka-aware envelope: partition key routing, schema version, DLQ routing, producer/consumer roundtrip serialization.
-- `webhook_handler.py` — HMAC-SHA256 webhook verification compatible with GitHub, Stripe, Salesforce, and ServiceNow signature formats.
+## 30-second example
 
-**Change Data Capture (v0.2.0):**
-- `cdc_event.py` — typed CDC event envelope: INSERT/UPDATE/DELETE/SNAPSHOT/TRUNCATE, Debezium format parsing, changed-field diff, audit dict.
+```python
+from integration_automation_patterns.event_envelope import EventEnvelope, DeliveryStatus
+from integration_automation_patterns.sync_boundary import SyncBoundary, FieldAuthority
 
-## Ecosystem
+# Idempotent event envelope — safe to process multiple times
+event = EventEnvelope(
+    event_id="evt_8f3a1b",
+    source="salesforce",
+    event_type="contact.updated",
+    payload={"email": "alice@example.com", "phone": "+1-555-0100"},
+    schema_version="1.0",
+)
 
-See [ECOSYSTEM.md](./ECOSYSTEM.md) for full broker, connector, and framework coverage matrix.
+# Field-level authority — who owns each field across systems?
+boundary = SyncBoundary(
+    authorities={
+        "email": FieldAuthority(owner="salesforce", read_others=["erp", "itsm"]),
+        "phone": FieldAuthority(owner="erp", read_others=["salesforce"]),
+    }
+)
+
+conflicts = boundary.detect_conflict(
+    incoming_system="salesforce",
+    fields={"email": "alice@example.com", "phone": "+1-555-0100"},
+)
+# conflicts → {"phone": ConflictDetail(owner="erp", incoming_system="salesforce")}
+
+if not conflicts:
+    event.mark_delivered()
+```
+
+See [`docs/implementation-note-01.md`](./docs/implementation-note-01.md) for a full walkthrough.
+
+---
+
+## Pattern catalog
+
+| Pattern | Class | Problem Solved |
+|---------|-------|---------------|
+| Idempotent Event | `EventEnvelope` | Duplicate processing under at-least-once delivery |
+| Authority Model | `SyncBoundary` | Field-level conflict detection across systems |
+| Circuit Breaker | `CircuitBreaker` | Cascading failure isolation with automatic recovery |
+| Saga | `SagaOrchestrator` | Multi-step distributed transaction with compensation |
+| Outbox | `OutboxPublisher` | Reliable event publish in the same DB transaction |
+| Kafka Envelope | `KafkaEnvelope` | Partition routing, schema versioning, DLQ support |
+| Webhook Validation | `WebhookHandler` | HMAC-SHA256 signature verification + idempotency |
+| Change Data Capture | `CDCEvent` | Typed INSERT/UPDATE/DELETE with Debezium parsing |
+
+---
 
 ## Repository structure
 
 ```
 src/integration_automation_patterns/
-├── event_envelope.py         # Reliable event transport + retry
-├── sync_boundary.py          # Bi-directional SOR sync
+├── event_envelope.py         # Reliable event transport + retry + delivery status
+├── sync_boundary.py          # Bi-directional SOR sync with field authority
 ├── circuit_breaker.py        # CLOSED/OPEN/HALF_OPEN state machine
-├── saga.py                   # Distributed saga orchestrator
-├── outbox.py                 # Transactional outbox pattern
-├── kafka_envelope.py         # Kafka-aware event envelope
+├── saga.py                   # Distributed saga orchestrator + compensation
+├── outbox.py                 # Transactional outbox for at-least-once delivery
+├── kafka_envelope.py         # Kafka-aware envelope: partition key, DLQ, schema
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification
-└── cdc_event.py              # Change Data Capture event types
+└── cdc_event.py              # Change Data Capture event types (Debezium-compatible)
 docs/
 ├── architecture.md
-├── implementation-note-01.md
-├── implementation-note-02.md
+├── implementation-note-01.md  # Event-driven integration reliability
+├── implementation-note-02.md  # Idempotency in enterprise event processing
 └── adr/
 ```
 
+See [ECOSYSTEM.md](./ECOSYSTEM.md) for the full broker, connector, and framework coverage matrix.
+
+---
+
 ## Published notes
 
-- [`docs/implementation-note-01.md`](./docs/implementation-note-01.md) — event-driven integration reliability
-- [`docs/implementation-note-02.md`](./docs/implementation-note-02.md) — idempotency in enterprise event processing
+- [Implementation Note 01](./docs/implementation-note-01.md) — Event-driven integration reliability
+- [Implementation Note 02](./docs/implementation-note-02.md) — Idempotency in enterprise event processing
 
-## Intended audience
+---
 
-- enterprise architects
-- integration engineers
-- workflow and automation operators
-- platform teams responsible for system-of-record reliability across CRM, ERP, and service platforms
+## Contributing
 
-## Citing this work
+Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines. Run `pytest tests/ -v` to verify your changes before opening a pull request.
 
-If you use these patterns in your work, see `CITATION.cff` or use GitHub's "Cite this repository" button above.
+---
+
+## Citation
+
+If you use these patterns in research or production, please cite:
+
+```bibtex
+@software{rana2026iap,
+  author    = {Rana, Ashutosh},
+  title     = {integration-automation-patterns: Enterprise integration reliability patterns},
+  year      = {2026},
+  url       = {https://github.com/ashutoshrana/integration-automation-patterns},
+  license   = {MIT}
+}
+```
+
+Or use GitHub's "Cite this repository" button above (reads `CITATION.cff`).
 
 ---
 
@@ -96,3 +163,9 @@ If you use these patterns in your work, see `CITATION.cff` or use GitHub's "Cite
 | [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | FERPA identity-scoped RAG |
 | [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | FERPA, HIPAA, GLBA policy enforcement |
 | **integration-automation-patterns** | How data flows | Event-driven enterprise integration |
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
