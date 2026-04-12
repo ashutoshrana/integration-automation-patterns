@@ -6,9 +6,10 @@ core ``WebhookHandler`` in the parent package.
 
 Available components
 --------------------
-- ``IdempotentWebhookReceiver`` — wraps ``WebhookHandler`` with
-  configurable header-based idempotency key extraction and an
-  in-process seen-ID cache for duplicate suppression.
+- ``IdempotentWebhookReceiver`` — HMAC-verified webhook receiver with
+  idempotency key extraction and duplicate suppression.
+- ``WebhookRouter`` — FastAPI APIRouter factory for HMAC-verified,
+  idempotency-safe webhook endpoints (requires ``fastapi`` extra).
 """
 
 from .webhook_handler import IdempotentWebhookReceiver, WebhookReceiveResult
@@ -16,4 +17,13 @@ from .webhook_handler import IdempotentWebhookReceiver, WebhookReceiveResult
 __all__ = [
     "IdempotentWebhookReceiver",
     "WebhookReceiveResult",
+    "WebhookRouter",
 ]
+
+
+def __getattr__(name: str) -> object:
+    if name == "WebhookRouter":
+        from .fastapi_router import WebhookRouter  # lazy — fastapi not always installed
+
+        return WebhookRouter
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

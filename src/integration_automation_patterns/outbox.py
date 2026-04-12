@@ -178,3 +178,107 @@ class OutboxProcessor:
 
         logger.info("[OUTBOX] Batch complete published=%d failed=%d", published, failed)
         return published, failed
+
+
+@dataclass
+class AsyncOutboxProcessor:
+    """
+    Async variant of ``OutboxProcessor`` for use with asyncio-based applications
+    (FastAPI, aiohttp, Starlette) where the broker client exposes a coroutine API.
+
+    All callables may be regular functions or coroutines — ``AsyncOutboxProcessor``
+    detects this at call time using ``inspect.iscoroutinefunction`` and awaits
+    accordingly. This lets you mix async and sync dependencies without ceremony.
+
+    Args:
+        fetch_pending: Returns pending records.  May be sync or async.
+            Signature: ``(batch_size: int) -> list[OutboxRecord]``
+        publish: Publishes an event to the broker.  May be sync or async.
+            Signature: ``(event: dict) -> None``
+        mark_published: Marks a record published.  May be sync or async.
+            Signature: ``(record_id: str) -> None``
+        mark_failed: Optional failure recorder.  May be sync or async.
+            Signature: ``(record_id: str, error: str, attempt_count: int) -> None``
+
+    Usage::
+
+        processor = AsyncOutboxProcessor(
+            fetch_pending=db.fetch_pending_outbox,    # async def
+            publish=kafka.send,                        # async def
+            mark_published=db.mark_published,          # async def
+        )
+
+        # In an asyncio background task:
+        published, failed = await processor.process_batch(batch_size=50)
+    """
+
+    fetch_pending: Any  # Callable[[int], Awaitable[list[OutboxRecord]] | list[OutboxRecord]]
+    publish: Any  # Callable[[dict], Awaitable[None] | None]
+    mark_published: Any  # Callable[[str], Awaitable[None] | None]
+    mark_failed: Any | None = None
+
+    async def process_batch(self, batch_size: int = 100) -> tuple[int, int]:
+        """
+        Async variant of ``OutboxProcessor.process_batch``.
+
+        Args:
+            batch_size: Maximum records to process per call.
+
+        Returns:
+            Tuple of ``(published_count, failed_count)``.
+        """
+        import inspect
+
+        if inspect.iscoroutinefunction(self.fetch_pending):
+            records = await self.fetch_pending(batch_size)
+        else:
+            records = self.fetch_pending(batch_size)
+
+        if not records:
+            return 0, 0
+
+        published = 0
+        failed = 0
+
+        for record in records:
+            try:
+                event = record.to_event_dict()
+
+                if inspect.iscoroutinefunction(self.publish):
+                    await self.publish(event)
+                else:
+                    self.publish(event)
+
+                if inspect.iscoroutinefunction(self.mark_published):
+                    await self.mark_published(record.record_id)
+                else:
+                    self.mark_published(record.record_id)
+
+                published += 1
+                logger.debug(
+                    "[OUTBOX] Published record_id=%s event_type=%s aggregate_id=%s",
+                    record.record_id,
+                    record.event_type,
+                    record.aggregate_id,
+                )
+            except Exception as exc:
+                failed += 1
+                error_msg = str(exc)
+                logger.warning(
+                    "[OUTBOX] Publish failed record_id=%s event_type=%s error=%s attempt=%d",
+                    record.record_id,
+                    record.event_type,
+                    error_msg,
+                    record.attempt_count + 1,
+                )
+                if self.mark_failed is not None:
+                    try:
+                        if inspect.iscoroutinefunction(self.mark_failed):
+                            await self.mark_failed(record.record_id, error_msg, record.attempt_count + 1)
+                        else:
+                            self.mark_failed(record.record_id, error_msg, record.attempt_count + 1)
+                    except Exception as mark_exc:
+                        logger.error("[OUTBOX] Failed to mark record as failed: %s", mark_exc)
+
+        logger.info("[OUTBOX] Batch complete published=%d failed=%d", published, failed)
+        return published, failed
