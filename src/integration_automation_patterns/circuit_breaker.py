@@ -56,9 +56,7 @@ class CircuitOpenError(RuntimeError):
     def __init__(self, name: str, retry_after: float) -> None:
         self.name = name
         self.retry_after = retry_after
-        super().__init__(
-            f"Circuit '{name}' is OPEN. Retry after {retry_after:.1f}s."
-        )
+        super().__init__(f"Circuit '{name}' is OPEN. Retry after {retry_after:.1f}s.")
 
 
 @dataclass

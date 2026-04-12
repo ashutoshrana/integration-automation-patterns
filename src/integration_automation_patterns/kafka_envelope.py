@@ -132,7 +132,7 @@ class KafkaEventEnvelope:
         raw = value if isinstance(value, str) else value.decode("utf-8")
         data: dict[str, Any] = json.loads(raw)
 
-        partition_key = (key.decode("utf-8") if isinstance(key, bytes) else (key or ""))
+        partition_key = key.decode("utf-8") if isinstance(key, bytes) else (key or "")
 
         return cls(
             event_id=data.get("event_id", str(uuid.uuid4())),

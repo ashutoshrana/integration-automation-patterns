@@ -11,6 +11,7 @@ from integration_automation_patterns.sync_boundary import (
 
 def _dt(offset_seconds: int = 0) -> datetime:
     from datetime import timedelta
+
     return datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=offset_seconds)
 
 
@@ -33,6 +34,7 @@ def _boundary(**kwargs):
 # ---------------------------------------------------------------------------
 # SyncBoundary.authority_for
 # ---------------------------------------------------------------------------
+
 
 class TestSyncBoundaryAuthority:
     def test_returns_authority_for_known_field(self):
@@ -83,6 +85,7 @@ class TestSyncBoundaryAuthority:
 # ---------------------------------------------------------------------------
 # SyncBoundary.detect_conflict
 # ---------------------------------------------------------------------------
+
 
 class TestDetectConflict:
     def test_no_conflict_when_values_equal(self):
@@ -142,9 +145,7 @@ class TestDetectConflict:
 
     def test_conflict_contains_correct_values(self):
         b = _boundary()
-        conflict = b.detect_conflict(
-            "email", "a@x.com", "b@x.com", "rec-42", last_sync_value="old@x.com"
-        )
+        conflict = b.detect_conflict("email", "a@x.com", "b@x.com", "rec-42", last_sync_value="old@x.com")
         assert conflict.value_a == "a@x.com"
         assert conflict.value_b == "b@x.com"
         assert conflict.last_sync_value == "old@x.com"
@@ -154,6 +155,7 @@ class TestDetectConflict:
 # ---------------------------------------------------------------------------
 # SyncConflict.last_writer
 # ---------------------------------------------------------------------------
+
 
 class TestSyncConflictLastWriter:
     def test_last_writer_a_wins(self):

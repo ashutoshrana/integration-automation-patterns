@@ -109,6 +109,7 @@ class TestSagaOrchestrator:
         log: list[str] = []
         saga = SagaOrchestrator("test-saga")
         saga.add_step("step1", action=lambda: log.append("a"), compensate=lambda: log.append("undo-a"))
+
         def _fail() -> None:
             raise ValueError("boom")
 
@@ -124,6 +125,7 @@ class TestSagaOrchestrator:
         saga = SagaOrchestrator("order-saga")
         saga.add_step("s1", action=lambda: log.append("s1"), compensate=lambda: log.append("c1"))
         saga.add_step("s2", action=lambda: log.append("s2"), compensate=lambda: log.append("c2"))
+
         def _fail3() -> None:
             raise RuntimeError("fail")
 

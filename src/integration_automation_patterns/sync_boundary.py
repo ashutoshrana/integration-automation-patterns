@@ -38,10 +38,11 @@ class RecordAuthority(Enum):
     rather than per-record. Use this sparingly — field-level authority
     increases complexity.
     """
-    SYSTEM_A = "system_a"    # Source system A is authoritative
-    SYSTEM_B = "system_b"    # Source system B is authoritative
-    SHARED = "shared"        # Field-level authority defined separately
-    MANUAL = "manual"        # Human review required before sync
+
+    SYSTEM_A = "system_a"  # Source system A is authoritative
+    SYSTEM_B = "system_b"  # Source system B is authoritative
+    SHARED = "shared"  # Field-level authority defined separately
+    MANUAL = "manual"  # Human review required before sync
 
 
 @dataclass(slots=True)
@@ -67,6 +68,7 @@ class SyncConflict:
         system_b_modified_at: When system B last modified this field.
             None if not available.
     """
+
     field_name: str
     value_a: Any
     value_b: Any
@@ -135,6 +137,7 @@ class SyncBoundary:
             fields are queued for manual review rather than silently discarded.
             Default False (system A changes simply overwrite system B).
     """
+
     record_type: str
     system_a_id: str
     system_b_id: str
@@ -163,10 +166,7 @@ class SyncBoundary:
 
     def fields_owned_by(self, authority: RecordAuthority) -> list[str]:
         """Return all fields where the given system is authoritative."""
-        return [
-            f for f, auth in self.field_authority.items()
-            if auth == authority and f not in self.excluded_fields
-        ]
+        return [f for f, auth in self.field_authority.items() if auth == authority and f not in self.excluded_fields]
 
     def detect_conflict(
         self,
