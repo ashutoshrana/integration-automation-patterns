@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - "type/dependencies"
+  categories:
+    - title: "Breaking Changes"
+      labels:
+        - "breaking-change"
+    - title: "New Features"
+      labels:
+        - "type/feature"
+    - title: "Bug Fixes"
+      labels:
+        - "type/bug"
+    - title: "Documentation"
+      labels:
+        - "type/docs"
+    - title: "Refactoring"
+      labels:
+        - "type/refactor"
+    - title: "Other Changes"
+      labels:
+        - "*"
