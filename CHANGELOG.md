@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-04-12
+
+### Added
+- `rate_limiter.py`: `TokenBucketRateLimiter` — thread-safe token-bucket rate limiter for webhook delivery, API call bursting, and event-driven integration rate management. Supports both blocking and non-blocking `acquire()`, plus async `async_acquire()` for FastAPI/asyncio environments. `RateLimitExceeded` exception with `tokens_available` and `cost` attributes.
+- `[pydantic]` optional dependency: `pydantic>=2.12.0` for Pydantic v2 model validation in webhook payloads
+- `[all]` extra combining kafka, fastapi, and pydantic dependencies
+
+### Changed
+- Bumped ecosystem compatibility pins:
+  - `fastapi`: `>=0.100.0` → `>=0.130.0` (FastAPI 0.135.3 current; Server-Sent Events + streaming JSON Lines support)
+  - `httpx`: `>=0.24.0` → `>=0.27.0`
+- `pyproject.toml`: version bumped to 0.4.0
+
+---
+
 ## [Unreleased]
 
 ### Added

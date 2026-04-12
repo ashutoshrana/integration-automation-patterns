@@ -2,6 +2,7 @@
 
 from .event_envelope import DeliveryStatus, EventEnvelope, RetryPolicy
 from .outbox import AsyncOutboxProcessor, OutboxProcessor, OutboxRecord
+from .rate_limiter import RateLimitExceeded, TokenBucketRateLimiter
 from .sync_boundary import RecordAuthority, SyncBoundary, SyncConflict
 
 __all__ = [
@@ -17,4 +18,7 @@ __all__ = [
     "AsyncOutboxProcessor",
     "OutboxProcessor",
     "OutboxRecord",
+    # Rate limiting
+    "TokenBucketRateLimiter",
+    "RateLimitExceeded",
 ]
