@@ -35,13 +35,14 @@ class DeliveryStatus(Enum):
     FAILED should not be silently dropped — it should be routed to a dead
     letter queue or an explicit remediation path.
     """
-    PENDING = "pending"         # Created, not yet dispatched
-    DISPATCHED = "dispatched"   # Sent to broker or downstream system
+
+    PENDING = "pending"  # Created, not yet dispatched
+    DISPATCHED = "dispatched"  # Sent to broker or downstream system
     ACKNOWLEDGED = "acknowledged"  # Downstream confirmed receipt
-    PROCESSED = "processed"     # Business logic completed successfully
-    RETRYING = "retrying"       # Failed at least once, within retry budget
-    FAILED = "failed"           # Retry budget exhausted; requires intervention
-    SKIPPED = "skipped"         # Intentionally not processed (e.g., duplicate)
+    PROCESSED = "processed"  # Business logic completed successfully
+    RETRYING = "retrying"  # Failed at least once, within retry budget
+    FAILED = "failed"  # Retry budget exhausted; requires intervention
+    SKIPPED = "skipped"  # Intentionally not processed (e.g., duplicate)
 
 
 @dataclass(slots=True)
@@ -64,6 +65,7 @@ class RetryPolicy:
         max_backoff_seconds: Upper bound on wait time when using exponential
             backoff. Prevents unbounded delays.
     """
+
     max_attempts: int = 3
     backoff_seconds: int = 30
     exponential: bool = True
@@ -82,7 +84,7 @@ class RetryPolicy:
         """
         if not self.exponential:
             return self.backoff_seconds
-        delay: int = int(self.backoff_seconds * (2 ** attempt_number))
+        delay: int = int(self.backoff_seconds * (2**attempt_number))
         return min(delay, self.max_backoff_seconds)
 
     def is_exhausted(self, attempt_number: int) -> bool:
@@ -131,6 +133,7 @@ class EventEnvelope:
         tags: Arbitrary key-value metadata for routing, filtering, or
             observability. Not used in business logic.
     """
+
     event_id: str
     event_type: str
     source_system: str
