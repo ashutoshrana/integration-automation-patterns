@@ -155,6 +155,6 @@ class WebhookHandler:
             part = part.strip()
             for prefix in ("sha256=", "v1="):
                 if part.startswith(prefix):
-                    return part[len(prefix):]
+                    return part[len(prefix) :]
         # Bare hex or unrecognised format — return as-is
         return header.strip()

@@ -1,6 +1,5 @@
 """Tests for integration_automation_patterns.event_envelope."""
 
-
 from integration_automation_patterns.event_envelope import (
     DeliveryStatus,
     EventEnvelope,
@@ -10,6 +9,7 @@ from integration_automation_patterns.event_envelope import (
 # ---------------------------------------------------------------------------
 # RetryPolicy
 # ---------------------------------------------------------------------------
+
 
 class TestRetryPolicy:
     def test_default_values(self):
@@ -34,9 +34,9 @@ class TestRetryPolicy:
 
     def test_exponential_backoff(self):
         rp = RetryPolicy(backoff_seconds=10, exponential=True, max_backoff_seconds=9999)
-        assert rp.wait_seconds_for_attempt(0) == 10   # 10 * 2^0
-        assert rp.wait_seconds_for_attempt(1) == 20   # 10 * 2^1
-        assert rp.wait_seconds_for_attempt(2) == 40   # 10 * 2^2
+        assert rp.wait_seconds_for_attempt(0) == 10  # 10 * 2^0
+        assert rp.wait_seconds_for_attempt(1) == 20  # 10 * 2^1
+        assert rp.wait_seconds_for_attempt(2) == 40  # 10 * 2^2
 
     def test_exponential_backoff_capped(self):
         rp = RetryPolicy(backoff_seconds=10, exponential=True, max_backoff_seconds=50)
@@ -46,6 +46,7 @@ class TestRetryPolicy:
 # ---------------------------------------------------------------------------
 # EventEnvelope lifecycle
 # ---------------------------------------------------------------------------
+
 
 def _make_event(**kwargs):
     defaults = dict(
@@ -102,14 +103,14 @@ class TestEventEnvelopeTransitions:
 
     def test_mark_failed_within_budget_sets_retrying(self):
         ev = _make_event()
-        ev.mark_dispatched()   # attempt_count = 1
-        ev.mark_failed()       # attempt_count=1 < max_attempts=3 → RETRYING
+        ev.mark_dispatched()  # attempt_count = 1
+        ev.mark_failed()  # attempt_count=1 < max_attempts=3 → RETRYING
         assert ev.status == DeliveryStatus.RETRYING
         assert ev.is_terminal() is False
 
     def test_mark_failed_budget_exhausted_sets_failed(self):
         ev = _make_event()
-        for _ in range(3):     # exhaust budget
+        for _ in range(3):  # exhaust budget
             ev.mark_dispatched()
         ev.mark_failed()
         assert ev.status == DeliveryStatus.FAILED
