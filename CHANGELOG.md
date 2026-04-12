@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Added
+- `http/fastapi_router.py`: `WebhookRouter` — FastAPI `APIRouter` factory for HMAC-verified, idempotency-safe webhook endpoints. Supports async and sync handler callables. Install with `integration-automation-patterns[fastapi]`
+- `outbox.py`: `AsyncOutboxProcessor` — async variant that accepts coroutine or sync callables for all I/O operations; for FastAPI, aiohttp, and asyncio-based applications
+
+---
+
 ## [0.3.0] — 2026-04-12
 
 ### Added
