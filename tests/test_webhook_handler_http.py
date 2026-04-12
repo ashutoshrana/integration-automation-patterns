@@ -12,13 +12,9 @@ import hmac
 import json
 import time
 
-import pytest
-
 from integration_automation_patterns.http.webhook_handler import (
     IdempotentWebhookReceiver,
-    WebhookReceiveResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -126,11 +122,13 @@ class TestSignatureVerification:
 class TestReplayProtection:
     def test_stale_timestamp_rejected(self) -> None:
         receiver = _make_receiver(tolerance=60.0)
-        payload = json.dumps({
-            "id": "evt_stale",
-            "type": "test",
-            "timestamp": time.time() - 120,  # 2 minutes old
-        }).encode()
+        payload = json.dumps(
+            {
+                "id": "evt_stale",
+                "type": "test",
+                "timestamp": time.time() - 120,  # 2 minutes old
+            }
+        ).encode()
         sig = _sign(payload)
         result = receiver.receive(payload, {_SIG_HEADER: sig})
         assert result.is_valid is False
@@ -146,11 +144,13 @@ class TestReplayProtection:
 
     def test_tolerance_none_disables_check(self) -> None:
         receiver = _make_receiver(tolerance=None)
-        payload = json.dumps({
-            "id": "evt_old",
-            "type": "test",
-            "timestamp": time.time() - 99999,
-        }).encode()
+        payload = json.dumps(
+            {
+                "id": "evt_old",
+                "type": "test",
+                "timestamp": time.time() - 99999,
+            }
+        ).encode()
         sig = _sign(payload)
         result = receiver.receive(payload, {_SIG_HEADER: sig})
         assert result.is_valid is True
