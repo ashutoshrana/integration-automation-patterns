@@ -4,40 +4,37 @@
 [![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 [![Python](https://img.shields.io/pypi/pyversions/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)]
+[![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
+
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 22 examples, 580 tests.**
+
+Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
 ---
 
 ## The problem this solves
 
-Enterprise systems that span CRM + ERP + messaging fail in predictable ways: duplicate event processing, partial transaction failures, and lost messages under retry. This library provides reference implementations of the patterns that solve these problems structurally — idempotent event envelopes, field-level authority boundaries, distributed saga orchestration, and transactional outbox — so integration logic is explicit, testable, and broker-agnostic.
+Enterprise systems that span CRM + ERP + messaging fail in predictable ways. This library provides reference implementations of the patterns that solve these problems structurally — idempotent event envelopes, field-level authority boundaries, saga compensation, transactional outbox, event sourcing with optimistic concurrency, and API gateway composition — so integration logic is explicit, testable, and broker-agnostic.
 
 ---
 
-## Architecture
+## Architecture overview
 
 ```
 Inbound Event
      │
      ▼
-EventEnvelope
-(event_id, idempotency_key, source, schema_version, metadata)
+EventEnvelope (event_id, idempotency_key, source, schema_version)
      │
-     ├─ Duplicate Check ──────────────────────────────────────────┐
-     │   event_id already processed? → skip, return cached result │
-     │                                                             │
-     ├─ Authority Check ──────────────────────────────────────────┤
-     │   SyncBoundary.detect_conflict()                           │
-     │   Which system owns this field?                            │
-     │   Conflict → raise ConflictError, log authority boundary   │
-     │                                                             │
-     ├─ Retry Policy ─────────────────────────────────────────────┤
-     │   Exponential backoff, max attempts                        │
-     │   CircuitBreaker: CLOSED → OPEN → HALF_OPEN recovery       │
-     │                                                             │
-     └─ Outbox → DB Transaction → Reliable Publish ───────────────┘
-         Write event in same DB tx as domain change
-         Relay process delivers to broker independently
+     ├─ Duplicate Check ──────────► skip if already processed
+     │
+     ├─ Authority Check ──────────► SyncBoundary.detect_conflict()
+     │                               which system owns this field?
+     │
+     ├─ Retry / Circuit Breaker ──► exponential backoff + OPEN/HALF_OPEN recovery
+     │
+     └─ Transactional Outbox ─────► write event + domain change in one DB tx
+                                     relay delivers to broker independently
 ```
 
 ---
@@ -48,15 +45,23 @@ EventEnvelope
 pip install integration-automation-patterns
 ```
 
+Optional extras:
+
+```bash
+pip install 'integration-automation-patterns[kafka]'
+pip install 'integration-automation-patterns[fastapi]'
+pip install 'integration-automation-patterns[pydantic]'
+```
+
 ---
 
-## 30-second example
+## Quick start
 
 ```python
-from integration_automation_patterns.event_envelope import EventEnvelope, DeliveryStatus
+from integration_automation_patterns.event_envelope import EventEnvelope
 from integration_automation_patterns.sync_boundary import SyncBoundary, FieldAuthority
 
-# Idempotent event envelope — safe to process multiple times
+# Idempotent event — safe to process multiple times
 event = EventEnvelope(
     event_id="evt_8f3a1b",
     source="salesforce",
@@ -65,40 +70,103 @@ event = EventEnvelope(
     schema_version="1.0",
 )
 
-# Field-level authority — who owns each field across systems?
+# Field-level authority: who owns each field?
 boundary = SyncBoundary(
     authorities={
-        "email": FieldAuthority(owner="salesforce", read_others=["erp", "itsm"]),
-        "phone": FieldAuthority(owner="erp", read_others=["salesforce"]),
+        "email": FieldAuthority(owner="salesforce", read_others=["erp"]),
+        "phone": FieldAuthority(owner="erp",        read_others=["salesforce"]),
     }
 )
-
 conflicts = boundary.detect_conflict(
     incoming_system="salesforce",
     fields={"email": "alice@example.com", "phone": "+1-555-0100"},
 )
 # conflicts → {"phone": ConflictDetail(owner="erp", incoming_system="salesforce")}
-
-if not conflicts:
-    event.mark_delivered()
 ```
-
-See [`docs/implementation-note-01.md`](./docs/implementation-note-01.md) for a full walkthrough.
 
 ---
 
-## Pattern catalog
+## Example catalog — 22 patterns
 
-| Pattern | Class | Problem Solved |
-|---------|-------|---------------|
-| Idempotent Event | `EventEnvelope` | Duplicate processing under at-least-once delivery |
-| Authority Model | `SyncBoundary` | Field-level conflict detection across systems |
-| Circuit Breaker | `CircuitBreaker` | Cascading failure isolation with automatic recovery |
-| Saga | `SagaOrchestrator` | Multi-step distributed transaction with compensation |
-| Outbox | `OutboxPublisher` | Reliable event publish in the same DB transaction |
-| Kafka Envelope | `KafkaEnvelope` | Partition routing, schema versioning, DLQ support |
+| # | File | Pattern | Problem Solved |
+|---|------|---------|---------------|
+| 01 | `01_event_envelope_retry.py` | Idempotent Event | Duplicate processing under at-least-once delivery |
+| 02 | `02_transactional_outbox.py` | Transactional Outbox | Reliable event publish in same DB transaction |
+| 03 | `03_saga_compensation.py` | Saga | Multi-step distributed transaction with rollback |
+| 04 | `04_crm_erp_sync_boundary.py` | Authority Model | Field-level conflict detection across systems |
+| 05 | `05_idempotent_crm_update.py` | Idempotent CRM | Deduplication on CRM write operations |
+| 06 | `06_end_to_end_integration.py` | End-to-End | Full CRM → ERP integration with all patterns combined |
+| 07 | `07_cqrs_event_sourcing.py` | CQRS Basics | Command/query separation with projection |
+| 08 | `08_approval_workflow.py` | Approval Workflow | Multi-stage approval with escalation |
+| 09 | `09_backpressure_retry.py` | Backpressure | Rate-limited retry with bounded queue |
+| 10 | `10_schema_evolution.py` | Schema Evolution | Forward/backward-compatible event schema versioning |
+| 11 | `11_process_manager.py` | Process Manager | Long-running process coordination across services |
+| 12 | `12_event_streaming_windows.py` | Streaming Windows | Tumbling/sliding window aggregation over event streams |
+| 13 | `13_distributed_cache_patterns.py` | Cache Aside | Read-through, write-through, cache invalidation |
+| 14 | `14_api_gateway_patterns.py` | API Gateway (v1) | Request routing, header injection, version dispatch |
+| 15 | `15_saga_orchestration_patterns.py` | Saga Orchestration | Orchestrator-driven saga with explicit compensation |
+| 16 | `16_event_sourcing_cqrs.py` | Event Sourcing (v1) | Append-only event log with basic projection |
+| 17 | `17_resilience_patterns.py` | Resilience | Circuit breaker, bulkhead, timeout, retry hierarchy |
+| 18 | `18_message_routing_patterns.py` | Message Routing | Content-based router + splitter + aggregator + filter |
+| 19 | `19_workflow_orchestration_patterns.py` | Workflow Orchestration | 7-state machine (PENDING→COMPLETED/COMPENSATED) + saga compensation |
+| 20 | `20_data_pipeline_patterns.py` | Data Pipeline / ETL | CheckpointStore (fault-tolerant resumability) + DataQualityValidator (5 rule types) + ETLPipeline |
+| 21 | `21_api_gateway_patterns.py` | API Gateway (v2) | RateLimiter (token-bucket) + RequestTransformer + ResponseTransformer + APIVersionRouter + APIComposer (sequential + parallel) |
+| 22 | `22_event_sourcing_cqrs_patterns.py` | Event Sourcing + CQRS (v2) | AggregateRoot + EventStore (optimistic concurrency) + SnapshotStore + Projection + EventSourcedRepository |
+
+---
+
+## Pattern reference
+
+### Core integration patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Idempotent Event | `EventEnvelope` | UUID event_id deduplication under at-least-once delivery |
+| Authority Model | `SyncBoundary` | Field-level conflict detection — which system of record owns this field? |
+| Circuit Breaker | `CircuitBreaker` | CLOSED → OPEN → HALF_OPEN state machine with configurable thresholds |
+| Saga | `SagaOrchestrator` | Multi-step distributed transaction with reverse-order compensation |
+| Transactional Outbox | `OutboxPublisher` | Reliable publish in same DB transaction as domain change |
+| CDC Event | `CDCEvent` | Typed INSERT/UPDATE/DELETE with Debezium-compatible parsing |
 | Webhook Validation | `WebhookHandler` | HMAC-SHA256 signature verification + idempotency |
-| Change Data Capture | `CDCEvent` | Typed INSERT/UPDATE/DELETE with Debezium parsing |
+
+### Workflow and orchestration patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Workflow State Machine | `WorkflowStateMachine` | 7-state lifecycle: PENDING → RUNNING → COMPLETED / FAILED / COMPENSATING / COMPENSATED / CANCELLED |
+| Compensation Engine | `CompensationEngine` | Reverse-order saga rollback with per-step compensating activities |
+| Process Manager | `ProcessManager` | Long-running correlation across multiple services and events |
+| Approval Workflow | `ApprovalWorkflow` | Multi-stage approval with timeout and escalation |
+
+### Data and messaging patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Data Quality Validator | `DataQualityValidator` | COMPLETENESS / UNIQUENESS / RANGE / REGEX / CUSTOM rules with `QualityGateError` |
+| Checkpoint Store | `CheckpointStore` | Stage + record-level resumability for fault-tolerant ETL |
+| Content-Based Router | `ContentBasedRouter` | Route messages to handlers by payload predicate |
+| Message Aggregator | `MessageAggregator` | Collect N messages into a batch with timeout |
+| Streaming Windows | `TumblingWindow`, `SlidingWindow` | Event stream aggregation |
+
+### API gateway patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Rate Limiter | `RateLimiter` | Token-bucket per client, thread-safe, raises `RateLimitExceeded(retry_after_seconds)` |
+| Request Transformer | `RequestTransformer` | Header injection, body field rename, URL prefix rewrite |
+| Response Transformer | `ResponseTransformer` | Status code remapping, response field masking (`"***"`) |
+| Version Router | `APIVersionRouter` | Handler registry by version string; raises `UnsupportedVersion` |
+| API Composer | `APIComposer` | Fan-out to multiple backends; sequential and parallel merge |
+
+### Event sourcing and CQRS patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Aggregate Root | `AggregateRoot` | `on_<EventType>` handler dispatch, uncommitted event collection |
+| Event Store | `EventStore` | Append-only with optimistic concurrency; `ConcurrencyConflict` on version mismatch |
+| Snapshot Store | `SnapshotStore` | Aggregate state checkpoint to reduce event replay time |
+| Projection | `AccountBalanceProjection` | Read model built from event stream; `rebuild()` and `reset()` |
+| Repository | `EventSourcedRepository` | EventStore + SnapshotStore with auto-snapshot at configurable threshold |
 
 ---
 
@@ -108,61 +176,69 @@ See [`docs/implementation-note-01.md`](./docs/implementation-note-01.md) for a f
 src/integration_automation_patterns/
 ├── event_envelope.py         # Reliable event transport + retry + delivery status
 ├── sync_boundary.py          # Bi-directional SOR sync with field authority
-├── circuit_breaker.py        # CLOSED/OPEN/HALF_OPEN state machine
+├── circuit_breaker.py        # CLOSED/OPEN/HALF_OPEN circuit breaker
 ├── saga.py                   # Distributed saga orchestrator + compensation
 ├── outbox.py                 # Transactional outbox for at-least-once delivery
-├── kafka_envelope.py         # Kafka-aware envelope: partition key, DLQ, schema
-├── webhook_handler.py        # HMAC-SHA256 webhook verification
-└── cdc_event.py              # Change Data Capture event types (Debezium-compatible)
+├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
+├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
+└── cdc_event.py              # CDC event types (Debezium-compatible)
+examples/                     # 22 runnable pattern examples (see catalog above)
+tests/                        # 580 passing tests
 docs/
 ├── architecture.md
-├── implementation-note-01.md  # Event-driven integration reliability
-├── implementation-note-02.md  # Idempotency in enterprise event processing
+├── implementation-note-01.md # Event-driven integration reliability
+├── implementation-note-02.md # Idempotency in enterprise event processing
 └── adr/
+    └── 001-idempotency-key-design.md
 ```
-
-See [ECOSYSTEM.md](./ECOSYSTEM.md) for the full broker, connector, and framework coverage matrix.
 
 ---
 
 ## Published notes
 
-- [Implementation Note 01](./docs/implementation-note-01.md) — Event-driven integration reliability
+- [Implementation Note 01](./docs/implementation-note-01.md) — Event-driven integration reliability: why idempotency must be structural
 - [Implementation Note 02](./docs/implementation-note-02.md) — Idempotency in enterprise event processing
+- [ADR 001](./docs/adr/001-idempotency-key-design.md) — Idempotency key design: event_id as the deduplication unit
+
+---
+
+## Near-term roadmap
+
+- `23_service_mesh_resilience.py` — Bulkhead + timeout hierarchy + health check aggregation
+- `24_distributed_tracing_patterns.py` — Trace propagation across services (W3C TraceContext)
+- `25_schema_registry_patterns.py` — Confluent Schema Registry + Avro evolution
+- Kafka + FastAPI integration examples with async support
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines. Run `pytest tests/ -v` to verify your changes before opening a pull request.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening a pull request.
 
 ---
 
 ## Citation
 
-If you use these patterns in research or production, please cite:
-
 ```bibtex
 @software{rana2026iap,
-  author    = {Rana, Ashutosh},
-  title     = {integration-automation-patterns: Enterprise integration reliability patterns},
-  year      = {2026},
-  url       = {https://github.com/ashutoshrana/integration-automation-patterns},
-  license   = {MIT}
+  author  = {Rana, Ashutosh},
+  title   = {integration-automation-patterns: Enterprise integration reliability patterns},
+  year    = {2026},
+  version = {0.21.0},
+  url     = {https://github.com/ashutoshrana/integration-automation-patterns},
+  license = {MIT}
 }
 ```
-
-Or use GitHub's "Cite this repository" button above (reads `CITATION.cff`).
 
 ---
 
 ## Part of the enterprise AI patterns trilogy
 
-| Library | Focus | Regulation |
-|---------|-------|-----------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | FERPA identity-scoped RAG |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | FERPA, HIPAA, GLBA policy enforcement |
-| **integration-automation-patterns** | How data flows | Event-driven enterprise integration |
+| Library | Focus | Coverage |
+|---------|-------|---------|
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 29 sectors · 27 regulations · 888 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 21 governance examples · 9 jurisdictions · 934 tests |
+| **integration-automation-patterns** | How data flows | 22 patterns · event sourcing · API gateway · 580 tests |
 
 ---
 
