@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.35.0] — 2026-04-13
+
+### Added — Advanced Event Sourcing Patterns (`35_event_sourcing_advanced.py`)
+
+Five pure-Python event sourcing primitives for point-in-time queries, schema migration, and causal tracking:
+
+- `EventProjector` — registers per-event-type handlers; `project(events)` accumulates state dict in order; `reset()` clears state for reuse
+- `EventUpcaster` — version-ordered schema migration; `register_migration(from_v, to_v, fn)` chains multiple hops; `current_version` returns highest registered target; gracefully handles already-current events
+- `EventReplay` — four filter methods over an in-memory log: `since(seq_id)`, `by_aggregate(agg_id)`, `by_type(event_type)`, `between(start, end)` (inclusive range)
+- `CausationChain` — records events with `causation_id` + `correlation_id`; `chain(event_id)` walks parent graph root-to-leaf with cycle guard; `correlation_group(cid)` returns all event_ids in same correlation
+- `TemporalQuery` — `state_at(timestamp, projector)` replays only events at or before timestamp; `events_in_window(start, end)` and `latest_before(timestamp)` complete the temporal API
+
+71 new tests. Total: **1359 passed**.
+
+---
+
 ## [0.34.0] — 2026-04-13
 
 ### Added — Distributed Transaction Patterns (`34_distributed_transaction_patterns.py`)
