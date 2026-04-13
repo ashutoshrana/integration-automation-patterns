@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.31.0] — 2026-04-13
+
+### Added — RetryPolicy and public API foundation
+
+- `src/integration_automation_patterns/retry_policy.py` — standalone `RetryPolicy` dataclass (exponential backoff + full jitter, configurable `retryable_exceptions`, `no_retry()` / `aggressive()` factory classmethods) + `RetryExhausted(attempts, last_error)` exception
+- `py.typed` — PEP 561 type marker (confirmed present)
+- `__init__.py` — `__version__ = "0.31.0"`, exports `WebhookHandler`, `WebhookEvent`, `OutboxPublisher` alias, `__all__`
+- `pyproject.toml` — `[tool.setuptools.package-data]` declares `py.typed`
+- `.claude/skills/add-integration-pattern.md` — Claude Code skill encoding conventions for adding new pattern examples
+
+28 new tests. Total: **1072 passed**.
+
+---
+
 ## [0.30.0] — 2026-04-13
 
 ### Added — Service Discovery Patterns (`31_service_discovery_patterns.py`)

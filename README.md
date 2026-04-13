@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 31 examples, 1044 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 31 examples, 1072 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -236,7 +236,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.30.0},
+  version = {0.31.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -248,9 +248,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 38 sectors · 40 regulations · 1233 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 29 governance examples · 16 jurisdictions · 1491 tests |
-| **integration-automation-patterns** | How data flows | 31 patterns · schema registry · GraphQL · 1044 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 38 sectors · 40 regulations · 1265 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 29 governance examples · 16 jurisdictions · 1527 tests |
+| **integration-automation-patterns** | How data flows | 31 patterns · schema registry · GraphQL · 1072 tests |
 
 ---
 

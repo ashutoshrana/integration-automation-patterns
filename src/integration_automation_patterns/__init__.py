@@ -1,5 +1,7 @@
 """Reference patterns for reliable enterprise integration and workflow automation."""
 
+__version__ = "0.31.0"
+
 from .azure_servicebus_envelope import AzureServiceBusEnvelope
 from .cdc_event import CDCEvent, CDCOperation, CDCSourceMetadata
 from .circuit_breaker import CircuitBreaker, CircuitOpenError, CircuitState
@@ -12,8 +14,14 @@ from .rate_limiter import RateLimitExceeded, SlidingWindowRateLimiter, TokenBuck
 from .saga import SagaOrchestrator, SagaResult, SagaStep
 from .sqs_envelope import SQSEventEnvelope
 from .sync_boundary import RecordAuthority, SyncBoundary, SyncConflict
+from .webhook_handler import WebhookEvent, WebhookHandler, WebhookReplayError, WebhookSignatureError
+
+# Alias: OutboxPublisher is the primary outbox dispatch interface
+OutboxPublisher = OutboxProcessor
 
 __all__ = [
+    # Version
+    "__version__",
     # Event handling
     "DeliveryStatus",
     "EventEnvelope",
@@ -43,9 +51,15 @@ __all__ = [
     # Outbox pattern
     "AsyncOutboxProcessor",
     "OutboxProcessor",
+    "OutboxPublisher",
     "OutboxRecord",
     # Rate limiting
     "TokenBucketRateLimiter",
     "SlidingWindowRateLimiter",
     "RateLimitExceeded",
+    # Webhook handling
+    "WebhookHandler",
+    "WebhookEvent",
+    "WebhookSignatureError",
+    "WebhookReplayError",
 ]
