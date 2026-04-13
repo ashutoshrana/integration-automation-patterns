@@ -6,6 +6,61 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.13.0] — 2026-04-13
+
+### Added — API Gateway Patterns (Rate Limiting + Circuit Breaker + Coalescing + API Keys + Versioning + Idempotency)
+
+**`examples/14_api_gateway_patterns.py`** — reference implementations of the six core patterns
+every production API gateway must solve at the application layer, independent of network-layer
+proxies. Covers rate limiting (two algorithms), circuit breaking with exponential backoff,
+in-flight request coalescing, API key lifecycle management, version routing with sunset policy,
+and client-driven idempotency.
+
+New classes (self-contained in the example):
+- `RateLimitAlgorithm` — TOKEN_BUCKET, SLIDING_WINDOW_LOG
+- `RateLimitResult` — allowed, limit, remaining, reset_after_ms, retry_after_ms, algorithm, client_id
+- `CircuitState` — CLOSED (normal), OPEN (failing fast), HALF_OPEN (probing)
+- `CircuitBreakerResult` — allowed, state, failure_count, last_failure_at, reason
+- `APIKeyStatus` — ACTIVE, EXPIRING_SOON, EXPIRED, REVOKED
+- `APIKeyTier` — FREE (10 rpm), STANDARD (100 rpm), PREMIUM (1000 rpm)
+- `APIKey` — key_id, key_hash (SHA-256), client_id, tier, created/expires timestamps, status,
+  rate_limit_rpm; `is_valid` property; `in_grace_period` property (successor key set + within grace window)
+- `APIVersion` — frozen: version_id, introduced_at, deprecated_at, sunset_at, is_current,
+  handler_name; `is_deprecated` property; `is_expired` property (time-based, monotonic)
+- `VersionRoutingResult` — version_id, handler_name, is_deprecated, is_expired, sunset_header, warning_header
+- `IdempotencyRecord` — idempotency_key, response, created_at, expires_at, request_hash; `is_expired`
+- `TokenBucketRateLimiter(client_id, rate_per_second, bucket_capacity)` — refills `_tokens` on each
+  check based on elapsed time; allows burst up to `bucket_capacity`; thread-safe Lock; allow_count/deny_count
+- `SlidingWindowRateLimiter(client_id, limit, window_ms)` — deque log of timestamps; prunes entries
+  older than window; exact counting with no boundary artifacts; retry_after_ms = oldest - cutoff
+- `CircuitBreaker(service_name, failure_threshold, success_threshold, timeout_ms, max_timeout_ms)` —
+  CLOSED→OPEN on consecutive failures; HALF_OPEN probe after timeout_ms; exponential backoff on re-trip
+  (doubles `_current_timeout_ms` up to `max_timeout_ms`); returns to CLOSED after success_threshold successes
+- `RequestCoalescer(key_fn)` — `get_or_fetch(fetch_fn, *args, **kwargs)` → (result, was_coalesced);
+  threading.Event per waiter; `_in_flight` dict prevents duplicate backend calls; coalesced_count/forwarded_count
+- `APIKeyManager(rotation_warning_days, grace_period_ms, default_ttl_days)` — `create_key()` → (raw_key, APIKey);
+  SHA-256 hashing; `validate_key(key_id, raw_key)` → (bool, APIKey, reason); `rotate_key()` creates successor
+  + sets grace_period_ends_at on old key; `revoke_key()` transitions to REVOKED; `TIER_RATE_LIMITS` class attribute
+- `APIVersionRouter` — `register_version(version)`; `route(version_header, url_prefix)` → VersionRoutingResult;
+  resolution order: header → URL → current; Sunset header (RFC 8594) for deprecated; 410 warning for expired;
+  `list_versions()` sorted by introduced_at
+- `RequestDeduplicator(ttl_ms)` — `execute(idempotency_key, handler, request_hash)` → (response, was_duplicate);
+  `purge_expired()` → count removed; `store_size()` → int; prevents double-charges, duplicate resource creation
+
+Five demo scenarios: rate limiting (burst vs. exact), circuit breaker state machine, request coalescing
+(5 concurrent threads → 1 backend call), API key lifecycle (create→validate→rotate→revoke),
+API version routing (current / deprecated / expired), request deduplication (payment idempotency).
+
+**`docs/implementation-note-12.md`** — "API Gateway Patterns: The Six Problems Every Production
+Gateway Must Solve" — covers token bucket vs. sliding window tradeoffs, circuit breaker state machine
+design, coalescing vs. caching distinction, API key lifecycle, version sunset policy, and idempotency
+key TTL design.
+
+**Tests:** `tests/test_api_gateway_patterns.py` — 61 tests covering all six patterns including
+timing-sensitive tests (window sliding, TTL expiry, circuit breaker probe). Full suite: 359 passed.
+
+---
+
 ## [0.12.0] — 2026-04-13
 
 ### Added — Distributed Cache Patterns
