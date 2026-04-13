@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.28.0] — 2026-04-13
+
+### Added — Async/Concurrent Patterns (`29_async_concurrent_patterns.py`)
+
+Pure stdlib async and concurrency patterns for enterprise integration:
+
+- `AsyncTaskPool` — semaphore-bounded coroutine pool; results in submission order; `run_with_timeout` via `asyncio.wait_for`
+- `AsyncRetry` — exponential backoff + jitter; `RetryExhausted(attempts, last_error)` after max attempts
+- `AsyncPipeline` — staged `asyncio.gather` fan-out; None drops item; `processed_count` and `stage_count`
+- `ThreadSafeCache` — `threading.RLock` + monotonic TTL; lazy eviction on `get` and `size`
+- `WorkerPool` — `ThreadPoolExecutor` wrapper; `submit` → Future; `map` → ordered results
+
+57 new tests. Total: **903 passed**.
+
+---
+
+
 ## [0.27.0] — 2026-04-13
 
 ### Added — gRPC Streaming Patterns (`28_grpc_streaming_patterns.py`)
