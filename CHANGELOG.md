@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.27.0] — 2026-04-13
+
+### Added — gRPC Streaming Patterns (`28_grpc_streaming_patterns.py`)
+
+Pure-stdlib simulation of all four gRPC streaming modes:
+
+- `UnaryUnary` — ordered interceptor chain; `call_with_metadata` returns `(response, {"server_time": float})`
+- `ServerStreaming` — generator handler; `call_with_limit` stops at max; cumulative `item_count`
+- `ClientStreaming` — list and generator input; `stream_and_call` lazily drains any iterable
+- `BidirectionalStreaming` — per-request handler, None-skipping; `call_with_queue` thread-safe via `queue.Queue`; cumulative `response_count`
+- `StreamingInterceptor` — named request/response transform registries; `wrap_server_streaming` and `wrap_bidirectional` embed both chains
+
+54 new tests. Total: **846 passed**.
+
+---
+
+
 ## [0.26.0] — 2026-04-13
 
 ### Added — Event-Driven Workflow Patterns (`27_event_driven_workflow_patterns.py`)
