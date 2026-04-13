@@ -6,6 +6,62 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.10.0] — 2026-04-13
+
+### Added — Process Manager Pattern for Distributed Transaction Coordination
+
+**`examples/11_process_manager.py`** — Process Manager pattern for long-running
+distributed business transactions with explicit state machine, LIFO compensating
+transaction registry, durable crash-recovery checkpointing, and per-step SLA timeouts.
+
+New classes (self-contained in the example):
+- `ProcessState` — lifecycle states: PENDING, RUNNING, COMPENSATING, COMPLETED,
+  COMPENSATED, FAILED
+- `StepOutcome` — step result: SUCCESS, FAILURE, TIMEOUT, SKIPPED
+- `ProcessStep` — forward action + compensation + SLA timeout + idempotency key
+  generator; compensation must be idempotent
+- `CompletedStepRecord` — snapshot of a completed forward step pushed to the LIFO
+  registry: step reference, action result, completed_at, idempotency key
+- `CompensatingTransactionRegistry` — LIFO stack of completed steps; `compensate_all()`
+  pops and executes compensations in reverse order; returns False if any compensation
+  fails (process enters FAILED state requiring manual intervention)
+- `ProcessCheckpoint` — serializable snapshot: process_id, next_step_index,
+  completed_step_ids, registry_snapshot (JSON-serializable); `serialize()` / `from_dict()`
+  for durable storage; written before each step execution for crash recovery
+- `ProcessManager` — orchestrates step execution, checkpoint writes, SLA detection,
+  LIFO compensation, and crash recovery via `execute()` and `resume_from_checkpoint()`
+- `ProcessManagerAuditRecord` — SOX/FAR-compliant audit: complete forward step log,
+  compensation log, timeout_reason, failure_reason, final context
+
+Key design decisions:
+- **LIFO is a correctness requirement, not a convention:** undoing steps in insertion
+  order would corrupt dependent states (e.g. void payment before unreserving inventory)
+- **Checkpoint written before each step:** ensures crash recovery resumes at the
+  correct boundary; combined with idempotency keys, re-execution is safe
+- **SLA timeout = same path as step failure:** both trigger LIFO compensation;
+  the action may have committed side effects before timeout detection — document this
+  in your runbook and consider a DeadLetterRouter for late-completing steps
+- **Failed compensation → FAILED state:** manual intervention is required when
+  a compensation step itself fails; the `failed_compensation_steps` counter in the
+  audit record surfaces this for operational alerting
+- **Injectable clock (`now_fn`):** enables deterministic SLA timeout tests without
+  real sleeps
+
+Four scenarios:
+- A: Happy path — all four steps succeed (COMPLETED)
+- B: Payment failure at step 2 — LIFO compensates inventory reservation (COMPENSATED)
+- C: Shipment SLA timeout — LIFO compensates payment + inventory (COMPENSATED)
+- D: Crash recovery — rehydrate from checkpoint at step 2, resume and complete
+
+Tests: 28 new test cases in `tests/test_process_manager.py`.
+
+**`docs/implementation-note-09.md`** — "Process Manager Pattern for Distributed
+Transaction Coordination": state machine design, LIFO ordering rationale, SLA timeout
+detection, checkpoint design, at-most-once semantics, SOX/FAR audit requirements,
+relationship to Saga / ApprovalWorkflow / BackpressureController / SchemaRegistry.
+
+---
+
 ## [0.9.0] — 2026-04-13
 
 ### Added — Schema Evolution and Consumer Version Compatibility Example + Implementation Note
