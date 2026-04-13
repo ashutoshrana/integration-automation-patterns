@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 22 examples, 580 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 23 examples, 614 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 22 patterns
+## Example catalog — 23 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -112,6 +112,7 @@ conflicts = boundary.detect_conflict(
 | 20 | `20_data_pipeline_patterns.py` | Data Pipeline / ETL | CheckpointStore (fault-tolerant resumability) + DataQualityValidator (5 rule types) + ETLPipeline |
 | 21 | `21_api_gateway_patterns.py` | API Gateway (v2) | RateLimiter (token-bucket) + RequestTransformer + ResponseTransformer + APIVersionRouter + APIComposer (sequential + parallel) |
 | 22 | `22_event_sourcing_cqrs_patterns.py` | Event Sourcing + CQRS (v2) | AggregateRoot + EventStore (optimistic concurrency) + SnapshotStore + Projection + EventSourcedRepository |
+| 23 | `23_service_mesh_resilience.py` | Service Mesh Resilience | Bulkhead (concurrent slot control, BulkheadRejected) + TimeoutHierarchy (operation/service/request tiers) + HealthCheckAggregator (HEALTHY/DEGRADED/UNHEALTHY) + RetryWithJitter (exponential backoff + full jitter) |
 
 ---
 
@@ -124,6 +125,10 @@ conflicts = boundary.detect_conflict(
 | Idempotent Event | `EventEnvelope` | UUID event_id deduplication under at-least-once delivery |
 | Authority Model | `SyncBoundary` | Field-level conflict detection — which system of record owns this field? |
 | Circuit Breaker | `CircuitBreaker` | CLOSED → OPEN → HALF_OPEN state machine with configurable thresholds |
+| Bulkhead | `Bulkhead` | Max concurrent + queue control; `BulkheadRejected` when both full |
+| Timeout Hierarchy | `TimeoutHierarchy` | Three-tier: operation → service → request; `TimeoutExceeded(tier, budget_ms)` |
+| Health Check Aggregator | `HealthCheckAggregator` | HEALTHY/DEGRADED/UNHEALTHY; `is_ready()` returns False only when UNHEALTHY |
+| Retry with Jitter | `RetryWithJitter` | Exponential backoff + full jitter; `RetryExhausted(attempts, last_error)` |
 | Saga | `SagaOrchestrator` | Multi-step distributed transaction with reverse-order compensation |
 | Transactional Outbox | `OutboxPublisher` | Reliable publish in same DB transaction as domain change |
 | CDC Event | `CDCEvent` | Typed INSERT/UPDATE/DELETE with Debezium-compatible parsing |
@@ -182,8 +187,8 @@ src/integration_automation_patterns/
 ├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
 └── cdc_event.py              # CDC event types (Debezium-compatible)
-examples/                     # 22 runnable pattern examples (see catalog above)
-tests/                        # 580 passing tests
+examples/                     # 23 runnable pattern examples (see catalog above)
+tests/                        # 614 passing tests
 docs/
 ├── architecture.md
 ├── implementation-note-01.md # Event-driven integration reliability
@@ -204,7 +209,6 @@ docs/
 
 ## Near-term roadmap
 
-- `23_service_mesh_resilience.py` — Bulkhead + timeout hierarchy + health check aggregation
 - `24_distributed_tracing_patterns.py` — Trace propagation across services (W3C TraceContext)
 - `25_schema_registry_patterns.py` — Confluent Schema Registry + Avro evolution
 - Kafka + FastAPI integration examples with async support
@@ -224,7 +228,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.21.0},
+  version = {0.22.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -236,9 +240,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 29 sectors · 27 regulations · 888 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 21 governance examples · 9 jurisdictions · 934 tests |
-| **integration-automation-patterns** | How data flows | 22 patterns · event sourcing · API gateway · 580 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 30 sectors · 29 regulations · 924 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 22 governance examples · 10 jurisdictions · 983 tests |
+| **integration-automation-patterns** | How data flows | 23 patterns · service mesh · event sourcing · 614 tests |
 
 ---
 
