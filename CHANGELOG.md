@@ -6,6 +6,46 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.15.0] — 2026-04-13
+
+### Added — Event Sourcing and CQRS Patterns (EventStore + Aggregate + Projection + Snapshot)
+
+**`examples/16_event_sourcing_cqrs.py`** — four complementary patterns for reliable, auditable,
+and eventually-consistent distributed data management covering the complete event-sourcing
+lifecycle from command to queryable read model.
+
+**New classes:**
+- `DomainEvent` (frozen dataclass) — immutable event record with aggregate_id, event_type,
+  payload, sequence number, and UUID event_id
+- `ExpectedVersion` — optimistic concurrency sentinel values: ANY (-1) skips check,
+  NO_STREAM (0) asserts new stream, integer N asserts exact event count
+- `ConcurrencyError` — raised by EventStore.append on optimistic concurrency conflict;
+  caller should reload and retry
+- `EventStore` — append-only, thread-safe per-aggregate event streams with global stream
+  for projection replay; per-stream locking prevents interleaved concurrent writes
+- `Aggregate` (base class) — `_raise_event` increments version + dispatches to
+  `apply_<event_type>` + buffers uncommitted; `load_from_history` replays without buffering
+- `OrderAggregate` — sample aggregate with four commands (place/pay/ship/cancel) and
+  corresponding apply handlers enforcing business invariants
+- `CommandResult` (frozen) — success flag, aggregate_id, events_saved, error string
+- `CommandHandler` — CQRS write side: load aggregate → execute command → save new events
+  at expected_version; catches ValueError and ConcurrencyError as CommandResult failures
+- `OrderReadModel` (dataclass) — denormalized query model built from domain events
+- `OrderProjection` — CQRS read side: rebuild (full replay) and update_incremental (tail
+  replay from last processed position); dispatches by event_type to update read models
+- `Snapshot` (dataclass) — point-in-time state capture at a given aggregate version
+- `SnapshotStore` — thread-safe in-memory snapshot store (one snapshot per aggregate)
+- `SnapshotCommandHandler` — extends CommandHandler; loads from snapshot + tail events;
+  auto-snapshots when version reaches multiple of snapshot_every
+
+**New tests:** 46 tests across `tests/test_event_sourcing_cqrs.py`
+
+**Implementation note:** See `docs/implementation-note-13.md` for architectural guidance on
+choosing between orchestration-based and choreography-based saga patterns when combined with
+event sourcing.
+
+---
+
 ## [0.14.0] — 2026-04-13
 
 ### Added — Distributed Saga Orchestration Patterns (Orchestration + Choreography + Outbox + DLQ)
