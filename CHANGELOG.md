@@ -6,6 +6,39 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.17.0] — 2026-04-13
+
+### Added — Message Routing Patterns (Content-Based Router + Splitter + Aggregator + Filter)
+
+**`examples/18_message_routing_patterns.py`** — four classic Enterprise Integration Patterns
+(Hohpe & Woolf, 2003) for message routing: content-based routing with predicate dispatch,
+message splitting with correlation tracking, stateful many-to-one aggregation with completion
+predicates and timeout support, and message filtering with dead-letter channel routing.
+
+**New classes:**
+- `Message` — dataclass with payload, message_id (UUID), correlation_id, channel,
+  headers dict, sequence, total_parts, parent_id, timestamp
+- `ContentBasedRouter` — predicate-based channel routing; `add_route(channel, predicate)`
+  (fluent); `route(msg)→str` (first-match-wins, returns default_channel if none match);
+  `route_all(msgs)→Dict[str,List[Message]]` grouping by channel
+- `MessageSplitter` — one-to-many splitting with `split_fn` callable;
+  each child message gets: new message_id, correlation_id=original.message_id,
+  parent_id=original.message_id, sequence=0..N-1, total_parts=N
+- `AggregationTimeout` — raised by `receive_with_timeout()` when elapsed > max_wait_seconds
+- `MessageAggregator` — many-to-one aggregation with completion_predicate and
+  aggregation_strategy callables; per-correlation threading.Lock for thread safety;
+  `receive(msg)→Optional[Message]` returns aggregated result when complete;
+  `receive_with_timeout(msg)` raises AggregationTimeout; `pending_groups()→List[str]`;
+  `flush_group(cid)→Optional[List[Message]]` for partial retrieval
+- `MessageFilter` — predicate accept/reject with optional dead_letter_channel;
+  `filter(msg)→Optional[Message]` (rejected messages routed to DLQ if configured);
+  `filter_all(msgs)→(accepted,rejected)`; `accepted_count`/`rejected_count` properties;
+  `reset_stats()` for counter clearing
+
+**Tests:** 27 tests in `tests/test_message_routing_patterns.py`
+
+---
+
 ## [0.16.0] — 2026-04-13
 
 ### Added — Resilience Patterns (Circuit Breaker + Bulkhead + Rate Limiter + Retry with Jitter)
