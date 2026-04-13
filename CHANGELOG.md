@@ -6,6 +6,54 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.11.0] — 2026-04-13
+
+### Added — Event Streaming Temporal Window Patterns
+
+**`examples/12_event_streaming_windows.py`** — reference implementation of temporal windowing
+patterns for enterprise event streaming pipelines, covering the three canonical window types,
+pluggable aggregation, watermark-based late-arrival handling, and a full StreamProcessor
+orchestrator.
+
+New classes (self-contained in the example):
+- `StreamEvent` — frozen dataclass: event_id (UUID), stream_key (partition key), event_time (ms),
+  ingestion_time (ms), payload (dict)
+- `AggregationFunction` — COUNT, SUM, AVG, MIN, MAX, DISTINCT_COUNT
+- `LateArrivalPolicy` — ACCEPT (re-open within tolerance), ASSIGN_TO_LATEST, DROP, SIDE_OUTPUT
+- `WindowSpec` — window_size_ms, slide_interval_ms (SlidingWindow), session_gap_ms (SessionWindow),
+  late_tolerance_ms, late_arrival_policy
+- `WindowKey` — immutable (stream_key, window_start_ms, window_end_ms); hashable for dict keying
+- `WindowResult` — finalized window: event_count, aggregations dict, late event counters, is_final
+- `LateEventRecord` — audit record: policy_applied, watermark_at_arrival, lateness_ms, assigned_window
+- `TumblingWindow` — non-overlapping fixed-duration windows; floor(event_time/W)*W assignment;
+  each event belongs to exactly one window (no double-counting)
+- `SlidingWindow` — overlapping windows advancing by slide_interval_ms; each event assigned to
+  ceil(W/S) windows; burst events appear in multiple windows for smoothed rate metrics
+- `SessionWindow` — activity-gap-based dynamic windows; gap >= session_gap_ms closes session and
+  opens a new one; sessions are per stream_key and data-driven (not time-driven);
+  `process_event()` returns (completed_key_or_None, current_key) for StreamProcessor integration
+- `WindowAggregator` — single-pass aggregation over window events; (AggregationFunction, field_name)
+  pairs are serializable (no lambda functions)
+- `LateArrivalHandler` — enforces late-arrival policy; SIDE_OUTPUT accumulates events in
+  reconciliation stream; all policies produce audit log entries
+- `StreamProcessor` — orchestrates window assignment, per-window event accumulation, watermark
+  advancement (`max(event_time) - allowed_lateness_ms`), and window finalization on watermark
+  advance; session windows use `_session_accumulators` dict (separate from `_window_events`)
+  that is flushed to `_window_events` when each session closes
+
+Four scenarios: tumbling order pipeline (3×20-event windows, no double-counting), sliding API
+rate monitoring (burst appears in multiple windows), session user journey (browse session +
+purchase session), late-arrival handling (DROP / SIDE_OUTPUT / within-tolerance ACCEPT).
+
+**`docs/implementation-note-10.md`** — "Temporal Windowing Patterns for Enterprise Event Streams"
+covering tumbling vs. sliding vs. session semantics, watermark model and late-arrival policies,
+aggregation design for serializability, exactly-once considerations, and distributed state
+management mapping to Apache Flink/Spark Structured Streaming patterns.
+
+**Test coverage:** 41 tests (`tests/test_event_streaming_windows.py`)
+
+---
+
 ## [0.10.0] — 2026-04-13
 
 ### Added — Process Manager Pattern for Distributed Transaction Coordination
