@@ -6,6 +6,51 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.6.0] — 2026-04-13
+
+### Added — CQRS + Event Sourcing Example and Implementation Note
+
+**`examples/07_cqrs_event_sourcing.py`** — CQRS (Command Query Responsibility Segregation)
+and event sourcing applied to a Salesforce CRM opportunity pipeline:
+
+New classes (all self-contained in the example, no core dependency changes):
+- `EventStore` — append-only event log with optimistic concurrency (`expected_version`),
+  temporal replay (`get_events_before(aggregate_id, cutoff)`), and subscription-based
+  saga triggers (`subscribe(event_type, handler)`)
+- `CommandBus` — routes write commands to handlers; each handler loads aggregate state
+  by replaying events, validates preconditions, and appends new events
+- `OpportunityProjection` — denormalized read model maintained by subscribing to domain
+  events; supports `rebuild(all_events)` for zero-data-loss projection reconstruction
+- `QueryBus` — routes read queries to projections; has no reference to `EventStore`,
+  enforcing the CQRS separation structurally
+- `ConcurrencyConflictError` — raised when `expected_version` does not match current
+  stream version (optimistic locking violation)
+
+Scenarios:
+- A: Full 5-step lifecycle — `CreateOpportunity` → `UpdateStage` × 3 → `CloseWon`;
+  read model reflects current state after every event
+- B: Temporal query — reconstruct opportunity state at any past timestamp by replaying
+  only events that occurred before the cutoff
+- C: Optimistic concurrency conflict — second concurrent update with stale
+  `expected_version` raises `ConcurrencyConflictError`
+- D: Read model rebuild — drop and replay all events; rebuilt projection is byte-for-byte
+  identical to the original (zero data loss demonstrated)
+- E: Cross-aggregate saga — `CloseWon` event triggers a commission calculation saga
+  via `EventStore.subscribe()` without any polling
+
+**`docs/implementation-note-05.md`** — "CQRS in Enterprise Integration: When to Separate Reads from Writes":
+- Decision criterion: when write shape and query shape diverge enough to justify CQRS
+- Event sourcing: state as a function of events; temporal queries and causal replay
+- CommandBus / QueryBus structural separation — why code-level enforcement beats convention
+- Optimistic concurrency: the `expected_version` contract and retry pattern
+- Read model rebuild: operational patterns enabled (schema migration, bug fix, new projections)
+- When NOT to use CQRS + event sourcing (configuration data, reference data, simple CRUD)
+- Integration with the transactional outbox pattern
+
+Closes #27.
+
+---
+
 ## [0.5.4] — 2026-04-13
 
 ### Added — End-to-End Integration Example
