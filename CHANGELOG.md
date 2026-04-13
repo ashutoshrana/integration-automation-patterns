@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.29.0] — 2026-04-13
+
+### Added — Message Broker Patterns (`30_message_broker_patterns.py`)
+
+Pure-stdlib message broker abstractions for enterprise integration:
+
+- `MessageQueue` — priority queue (heapq) + FIFO fallback; `enqueue(msg, priority)`, `dequeue()`, `peek()`; thread-safe with `threading.Lock`
+- `TopicExchange` — AMQP-style `*` (single-word) and `#` (multi-word) routing; `bind(pattern, handler)`, `publish(routing_key, msg)`
+- `FanoutExchange` — broadcast to all subscribers; `subscribe(name, handler)`, `publish(msg)`, `unsubscribe(name)`
+- `MessageBatch` — auto-flush at configurable size; `add(msg)` → immediate flush when `batch_size` reached; `flush()` for manual drain
+- `DeduplicationFilter` — time-window idempotency; `seen_ids` with TTL eviction; `process(msg)` returns `True` if new, `False` if duplicate
+
+74 new tests. Total: **977 passed**.
+
+---
+
 ## [0.28.0] — 2026-04-13
 
 ### Added — Async/Concurrent Patterns (`29_async_concurrent_patterns.py`)

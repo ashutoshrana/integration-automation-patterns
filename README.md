@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 29 examples, 903 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 30 examples, 977 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 29 patterns
+## Example catalog — 30 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -119,6 +119,7 @@ conflicts = boundary.detect_conflict(
 | 27 | `27_event_driven_workflow_patterns.py` | Event-Driven Workflows | EventBus (pub/sub + wildcard) + EventSourcingWorkflow (append-only log + state replay) + ChoreographySaga (event-driven saga, no orchestrator) + DeadLetterQueue (retry + DLQ + recovery) + EventFilter (predicate chain + transformer chain) |
 | 28 | `28_grpc_streaming_patterns.py` | gRPC Streaming | UnaryUnary (interceptor chain) + ServerStreaming (generator + limit) + ClientStreaming (list + generator drain) + BidirectionalStreaming (None-skip + queue) + StreamingInterceptor (named request/response transforms) |
 | 29 | `29_async_concurrent_patterns.py` | Async/Concurrent | AsyncTaskPool (semaphore-bounded + ordered results) + AsyncRetry (exponential backoff + jitter + RetryExhausted) + AsyncPipeline (staged gather + None-drop) + ThreadSafeCache (RLock + TTL) + WorkerPool (ThreadPoolExecutor wrapper) |
+| 30 | `30_message_broker_patterns.py` | Message Broker | MessageQueue (priority + FIFO, thread-safe) + TopicExchange (AMQP-style * and # routing) + FanoutExchange (broadcast to all subscribers) + MessageBatch (auto-flush at size) + DeduplicationFilter (time-window idempotency) |
 
 ---
 
@@ -193,8 +194,8 @@ src/integration_automation_patterns/
 ├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
 └── cdc_event.py              # CDC event types (Debezium-compatible)
-examples/                     # 29 runnable pattern examples (see catalog above)
-tests/                        # 903 passing tests
+examples/                     # 30 runnable pattern examples (see catalog above)
+tests/                        # 977 passing tests
 docs/
 ├── architecture.md
 ├── implementation-note-01.md # Event-driven integration reliability
@@ -234,7 +235,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.28.0},
+  version = {0.29.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -246,9 +247,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 36 sectors · 38 regulations · 1145 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 28 governance examples · 15 jurisdictions · 1404 tests |
-| **integration-automation-patterns** | How data flows | 29 patterns · schema registry · GraphQL · 903 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 37 sectors · 39 regulations · 1193 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 29 governance examples · 16 jurisdictions · 1491 tests |
+| **integration-automation-patterns** | How data flows | 30 patterns · schema registry · GraphQL · 977 tests |
 
 ---
 
