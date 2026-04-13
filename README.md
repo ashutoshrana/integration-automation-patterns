@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 24 examples, 657 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 25 examples, 695 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 24 patterns
+## Example catalog — 25 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -114,6 +114,7 @@ conflicts = boundary.detect_conflict(
 | 22 | `22_event_sourcing_cqrs_patterns.py` | Event Sourcing + CQRS (v2) | AggregateRoot + EventStore (optimistic concurrency) + SnapshotStore + Projection + EventSourcedRepository |
 | 23 | `23_service_mesh_resilience.py` | Service Mesh Resilience | Bulkhead (concurrent slot control, BulkheadRejected) + TimeoutHierarchy (operation/service/request tiers) + HealthCheckAggregator (HEALTHY/DEGRADED/UNHEALTHY) + RetryWithJitter (exponential backoff + full jitter) |
 | 24 | `24_distributed_tracing_patterns.py` | Distributed Tracing | W3C TraceContext (traceparent header) + Span (OTLP-compatible) + Tracer + AlwaysSample/NeverSample/RatioSampler + InMemorySpanExporter + TracerProvider + W3C Baggage |
+| 25 | `25_schema_registry_patterns.py` | Schema Registry | InMemorySchemaRegistry (all 7 CompatibilityLevels) + AvroSchemaEvolution (backward/forward/full) + ConfluentFramingCodec (wire format) + JsonSchemaSerializer + SchemaEvolutionMigrator |
 
 ---
 
@@ -188,7 +189,7 @@ src/integration_automation_patterns/
 ├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
 └── cdc_event.py              # CDC event types (Debezium-compatible)
-examples/                     # 24 runnable pattern examples (see catalog above)
+examples/                     # 25 runnable pattern examples (see catalog above)
 tests/                        # 614 passing tests
 docs/
 ├── architecture.md
@@ -241,9 +242,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 31 sectors · 30 regulations · 960 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 23 governance examples · 11 jurisdictions · 1027 tests |
-| **integration-automation-patterns** | How data flows | 24 patterns · distributed tracing · event sourcing · 657 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 32 sectors · 32 regulations · 997 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 24 governance examples · 12 jurisdictions · 1088 tests |
+| **integration-automation-patterns** | How data flows | 25 patterns · schema registry · distributed tracing · 695 tests |
 
 ---
 

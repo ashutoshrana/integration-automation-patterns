@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.24.0] — 2026-04-13
+
+### Added — Schema Registry Patterns (`25_schema_registry_patterns.py`)
+
+Confluent Schema Registry patterns with Avro schema evolution in pure stdlib Python:
+
+- `InMemorySchemaRegistry` — auto-incrementing schema IDs, per-subject version lists, idempotent re-registration, all 7 CompatibilityLevels (BACKWARD/FORWARD/FULL/NONE + TRANSITIVE variants), per-subject compatibility overrides
+- `AvroSchemaEvolution` — `is_backward_compatible()`, `is_forward_compatible()`, `is_full_compatible()` — field-level diff rules matching Avro spec §3.2
+- `ConfluentFramingCodec` — exact 5-byte Confluent wire format header (magic byte 0x00 + 4-byte big-endian schema_id); `encode()`, `decode()`, `validate_framing()`
+- `JsonSchemaSerializer` — serialize/deserialize with Confluent framing; looks up schema_id from registry
+- `SchemaEvolutionMigrator` — migrate record from one schema version to another; adds fields with defaults, removes obsolete fields
+
+38 new tests. Total: **695 passed**.
+
+---
+
 ## [0.23.0] — 2026-04-13
 
 ### Added — Distributed Tracing Patterns (`24_distributed_tracing_patterns.py`)
