@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.2] — 2026-04-13
+
+### Added — Idempotent CRM Update Example
+
+**`examples/05_idempotent_crm_update.py`** — end-to-end idempotent event flow
+for a Salesforce Lead Converted → SAP S/4HANA Contact Sync:
+- `ProcessedEventStore` — simulates Redis SETNX / DB unique constraint deduplication
+- Scenario A: first delivery, 2 transient failures, succeeds on attempt 3
+- Scenario B: broker redelivers same event_id → SKIPPED (update not re-applied)
+- Scenario C: new event with different event_id → applied on first attempt
+- Scenario D: persistent failure → dead-lettered after retry budget exhausted
+- Audit trail: `CRMUpdateResult` per event with outcome + attempt count
+- Five structural idempotency rules with rationale
+- Closes #1.
+
+---
+
 ## [0.5.1] — 2026-04-13
 
 ### Added — CRM-ERP Sync Boundary Example and Implementation Note
