@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.39.0] — 2026-04-13
+
+### Added — Distributed Tracing and Observability Patterns (`39_distributed_tracing_patterns.py`)
+
+Five pure-Python (stdlib-only) distributed tracing and observability primitives:
+
+- `TraceContext` — W3C traceparent-compatible context propagation: `uuid4`-based trace_id/span_id, `to_traceparent()`/`from_traceparent()`, `child_context()`, sampling_flag
+- `Span` — individual trace span with timing: `finish()`, `duration_ms()` (live or finished), `add_event()`, `set_status(OK/ERROR/UNSET)`, `to_dict()` serialization
+- `Tracer` — in-memory span collector: `start_span()`/`finish_span()`, active+completed lists with `threading.Lock`, `get_trace()` sorted by start_time, `export()`
+- `SamplingStrategy` — deterministic sampling: `always_on()`/`always_off()`/`ratio()` class methods, `should_sample()` via `abs(hash(trace_id)) % 100`
+- `TraceExporter` — accumulated span store: `export()`, `get_by_service()`, `get_errors()` (status==ERROR), `get_slow_spans(threshold_ms)`, `clear()`
+
+112 new tests. Total: **1704 passed**.
+
+---
+
 ## [0.38.0] — 2026-04-13
 
 ### Added — Reactive Streams and Data Pipeline Patterns (`38_reactive_streams_patterns.py`)
