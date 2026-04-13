@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.30.0] — 2026-04-13
+
+### Added — Service Discovery Patterns (`31_service_discovery_patterns.py`)
+
+Service registry, load balancing, health checking, and service mesh orchestration:
+
+- `ServiceRegistry` — register/deregister/heartbeat/get_instances (HEALTHY only)/evict_stale/all_services; thread-safe with `threading.Lock`; evict_stale counts HEALTHY→UNHEALTHY transitions only
+- `LoadBalancer` — `round_robin` (Lock-guarded `_index` counter) / `random` (`random.choice`) / `weighted` (cumulative-sum O(n) walk); raises `ValueError` on empty instance list
+- `HealthChecker` — configurable `failure_rate` (0.0–1.0); validates range; `check_all` maps `instance_id → bool`
+- `ServiceMesh` — `route` probes instances and selects via balancer; `rebalance` deregisters failed instances; `register_and_check` auto-deregisters on immediate health failure
+
+67 new tests. Total: **1044 passed**.
+
+---
+
 ## [0.29.0] — 2026-04-13
 
 ### Added — Message Broker Patterns (`30_message_broker_patterns.py`)

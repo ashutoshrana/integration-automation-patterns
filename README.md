@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 30 examples, 977 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 31 examples, 1044 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 30 patterns
+## Example catalog — 31 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -120,6 +120,7 @@ conflicts = boundary.detect_conflict(
 | 28 | `28_grpc_streaming_patterns.py` | gRPC Streaming | UnaryUnary (interceptor chain) + ServerStreaming (generator + limit) + ClientStreaming (list + generator drain) + BidirectionalStreaming (None-skip + queue) + StreamingInterceptor (named request/response transforms) |
 | 29 | `29_async_concurrent_patterns.py` | Async/Concurrent | AsyncTaskPool (semaphore-bounded + ordered results) + AsyncRetry (exponential backoff + jitter + RetryExhausted) + AsyncPipeline (staged gather + None-drop) + ThreadSafeCache (RLock + TTL) + WorkerPool (ThreadPoolExecutor wrapper) |
 | 30 | `30_message_broker_patterns.py` | Message Broker | MessageQueue (priority + FIFO, thread-safe) + TopicExchange (AMQP-style * and # routing) + FanoutExchange (broadcast to all subscribers) + MessageBatch (auto-flush at size) + DeduplicationFilter (time-window idempotency) |
+| 31 | `31_service_discovery_patterns.py` | Service Discovery | ServiceRegistry (register/deregister/heartbeat/evict_stale, thread-safe) + LoadBalancer (round_robin/random/weighted strategies) + HealthChecker (configurable failure_rate simulation) + ServiceMesh (route/rebalance/register_and_check orchestration) |
 
 ---
 
@@ -235,7 +236,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.29.0},
+  version = {0.30.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -247,9 +248,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 37 sectors · 39 regulations · 1193 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 38 sectors · 40 regulations · 1233 tests |
 | [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 29 governance examples · 16 jurisdictions · 1491 tests |
-| **integration-automation-patterns** | How data flows | 30 patterns · schema registry · GraphQL · 977 tests |
+| **integration-automation-patterns** | How data flows | 31 patterns · schema registry · GraphQL · 1044 tests |
 
 ---
 
