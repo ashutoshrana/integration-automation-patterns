@@ -6,6 +6,58 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.0] — 2026-04-13
+
+### Added — Multi-Broker Envelope Adapters
+
+**AWS SQS/SNS** (`sqs_envelope.py` — `SQSEventEnvelope`):
+- Standard queues and FIFO queues (`message_group_id` / `message_deduplication_id`).
+- `to_send_params()`: produces a dict directly passable to `boto3` `sqs.send_message(**params)`.
+- `from_sqs_message()`: deserialises from SQS message dict; transparently unwraps SNS fan-out
+  notifications (``{"Type": "Notification", ...}`` wrapper).
+- `mark_dead_letter(reason)`, `is_fifo()`, `approximate_receive_count` tracking.
+- Closes #8.
+
+**Azure Service Bus** (`azure_servicebus_envelope.py` — `AzureServiceBusEnvelope`):
+- Sessions (ordered, grouped delivery per `session_id` — analogous to Kafka partition keys).
+- `to_service_bus_message()`: produces a dict for `azure-servicebus` `ServiceBusMessage(**params)`.
+- `from_service_bus_message()`: accepts SDK object or test-friendly dict; handles multi-frame body.
+- Scheduled delivery (`enqueue_time_utc`), correlation ID, `mark_dead_letter(reason, description)`.
+- `is_session_enabled()`, `is_scheduled()`.
+
+**GCP Pub/Sub** (`gcp_pubsub_envelope.py` — `GCPPubSubEnvelope`):
+- Ordering keys for per-key sequential delivery.
+- `to_publish_data()` / `to_publish_attributes()`: separate data bytes + string attributes for
+  `publisher.publish(topic, data=..., **attrs)`.
+- `from_pubsub_message()`: pull subscription (SDK object or dict).
+- `from_push_payload()`: push subscription HTTP body (base64 decode + SNS-style unwrap).
+- `delivery_attempt` tracking, `exceeds_delivery_attempts(n)` for manual DLQ routing.
+- Partially closes #4.
+
+**RabbitMQ AMQP** (`rabbitmq_envelope.py` — `RabbitMQEnvelope`):
+- Exchange / routing key / topic exchange routing.
+- `to_amqp_body()` / `to_amqp_properties()`: body bytes + pika `BasicProperties`-compatible dict.
+- `from_amqp_message()`: accepts pika `BasicProperties` or dict; parses `x-death` header for
+  DLX death count tracking.
+- Per-message TTL (`expiration`), priority, request/reply (`reply_to`, `correlation_id`).
+- `mark_dead_letter(reason)`, `is_dead_lettered()`, `redelivered` flag.
+- Closes #6.
+
+### Changed
+- `kafka_envelope.py`: `to_producer_record()` now uses `ensure_ascii=False` so non-ASCII
+  characters (e.g. names with diacritics) are preserved verbatim in Kafka message bytes.
+- `__init__.py`: now exports all modules — `KafkaEventEnvelope`, `SQSEventEnvelope`,
+  `AzureServiceBusEnvelope`, `GCPPubSubEnvelope`, `RabbitMQEnvelope`, `CDCEvent`,
+  `CDCOperation`, `CDCSourceMetadata`, `CircuitBreaker`, `CircuitOpenError`, `CircuitState`,
+  `SagaOrchestrator`, `SagaStep`, `SagaResult`.
+
+### Tests
+- 65 new tests in `tests/test_broker_envelopes.py` (create, serialise, deserialise, roundtrip,
+  DLQ, SNS-unwrap, push-payload, x-death count for all four adapters).
+- Total: **171 passing**.
+
+---
+
 ## [0.4.1] — 2026-04-13
 
 ### Added

@@ -170,7 +170,7 @@ class KafkaEventEnvelope:
         return {
             "topic": self.topic,
             "key": self.partition_key,
-            "value": json.dumps(body).encode("utf-8"),
+            "value": json.dumps(body, ensure_ascii=False).encode("utf-8"),
             "headers": [(k, v.encode("utf-8")) for k, v in self.headers.items()],
         }
 
