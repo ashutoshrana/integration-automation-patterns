@@ -6,6 +6,37 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.18.0] — 2026-04-13
+
+### Added — Workflow Orchestration Patterns (State Machine + Activity Execution + Compensation + Retry)
+
+**`examples/19_workflow_orchestration_patterns.py`** — workflow orchestration patterns for
+long-running business processes with saga-style compensation, configurable activity retry,
+and strict state machine enforcement. Inspired by Temporal, Apache Conductor, and Camunda
+workflow engines; implemented with zero external dependencies.
+
+**New classes:**
+- `WorkflowState` — 7-state enum: PENDING / RUNNING / COMPLETED / FAILED /
+  COMPENSATING / COMPENSATED / CANCELLED; terminal states reject all transitions
+- `WorkflowTransitionError` — raised on invalid state transitions
+- `WorkflowTimeoutError` — raised when execution exceeds `timeout_seconds`
+- `ActivityFailedError` — raised when activity fails and compensation is initiated
+- `ActivityResult` — activity_id, success, output, error, duration_ms, compensated flag
+- `WorkflowActivity` (Protocol) — `execute(input_data)→ActivityResult`
+- `CompensatingActivity` (Protocol) — `compensate(original_input, original_output)→bool`
+- `WorkflowStep` — (activity, compensating_activity, max_retries, retry_delay_seconds)
+- `WorkflowDefinition` — named ordered list of steps with optional timeout_seconds
+- `WorkflowInstance` — stateful execution; `execute()` runs forward, triggers reverse
+  compensation on failure; `transition_to()` enforces valid state machine; `get_history()`,
+  `successful_steps()`, `compensated_steps()`, `elapsed_seconds()` introspection
+- `WorkflowOrchestrator` — manages multiple instances; `start(definition, input)→id`;
+  `get_status()`, `cancel()`, `list_active()`, `list_by_state()`, `completed_count()`,
+  `failed_count()`
+
+**Tests:** 34 tests in `tests/test_workflow_orchestration_patterns.py`
+
+---
+
 ## [0.17.0] — 2026-04-13
 
 ### Added — Message Routing Patterns (Content-Based Router + Splitter + Aggregator + Filter)
