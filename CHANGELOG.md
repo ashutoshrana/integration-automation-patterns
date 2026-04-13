@@ -6,7 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.21.0] — 2026-04-13
+## [0.23.0] — 2026-04-13
+
+### Added — Distributed Tracing Patterns (`24_distributed_tracing_patterns.py`)
+
+W3C TraceContext and OpenTelemetry-aligned distributed tracing in pure stdlib Python:
+
+- `TraceContext` — W3C Trace Context propagation (`traceparent` header: `00-{trace_id}-{parent_id}-{flags}`), with `new_root()`, `child()`, `to_traceparent()`, `from_traceparent()`, `is_sampled()`
+- `Span` — unit of work with `add_event()`, `set_attribute()`, `finish()`, `duration_ms()`, `to_dict()` (OTLP-compatible schema)
+- `Tracer` — span factory with `start_span()`, `inject()` (writes `traceparent` header), `extract()` (reads and parses header)
+- `AlwaysSample`, `NeverSample`, `RatioSampler` — deterministic sampling via `int(trace_id[:8], 16) % 10000 < ratio * 10000`
+- `InMemorySpanExporter` — test-friendly exporter with `export()`, `get_finished_spans()`, `clear()`
+- `TracerProvider` — central factory/registry with `get_tracer()`, `force_flush()`, `shutdown()`
+- `Baggage` — immutable W3C Baggage with `set()` returning new instance, `to_header()`, `from_header()`
+
+43 new tests. Total: **657 passed**.
+
+---
+
+## [0.22.0] — 2026-04-13
 
 ### Added — Event Sourcing & CQRS Patterns (AggregateRoot + EventStore + Projection + Snapshot)
 
