@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.34.0] — 2026-04-13
+
+### Added — Distributed Transaction Patterns (`34_distributed_transaction_patterns.py`)
+
+Four pure-Python distributed transaction primitives using only the standard library:
+
+- `TwoPhaseCommit` — classic 2PC coordinator; registers named participants with prepare/commit/rollback callbacks; Phase 1 polls all votes and rolls back on any False; Phase 2 commits all on unanimous True; participant state tracked throughout
+- `CompensatingTransaction` — Saga-style manager; method-chaining `add_step` with paired compensating callbacks; on failure runs already-completed steps' compensate_fn in LIFO order; supports `reset()`
+- `DistributedLock` — token-based TTL lock; reentrant support (depth counter for same owner); transparent TTL expiry takeover; blocking `acquire(timeout)` and TTL extension
+- `TransactionCoordinator` — multi-resource coordinator; resources enlist rollback callbacks by UUID; LIFO rollback on failure; clears registry on commit
+
+70 new tests. Total: **1288 passed**.
+
+---
+
 ## [0.33.0] — 2026-04-13
 
 ### Added — Data Pipeline Patterns (`33_data_pipeline_patterns.py`)
