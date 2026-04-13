@@ -6,6 +6,60 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.8.0] — 2026-04-13
+
+### Added — Backpressure and Retry Storm Prevention Example + Implementation Note
+
+**`examples/09_backpressure_retry.py`** — four patterns for keeping event-driven
+integration pipelines stable under downstream system pressure:
+
+New classes (self-contained in the example):
+- `ErrorType` — classification for retry policy: TRANSIENT (retry with backoff),
+  RESOURCE_EXHAUSTED (retry with longer base), NON_RETRYABLE (dead-letter immediately,
+  no budget consumed), UNKNOWN (treat as TRANSIENT)
+- `AdaptiveRetryStrategy` — exponential backoff with full jitter (AWS Architecture Blog
+  formula: `random_between(0, min(cap, base * 2^attempt))`); per-error-type policy;
+  RESOURCE_EXHAUSTED uses a 4× longer base interval
+- `RetryBudget` — shared retry budget across the consumer in a rolling time window;
+  when exhausted, events route to dead-letter immediately rather than blocking
+  indefinitely; NON_RETRYABLE errors do not consume budget
+- `DownstreamHealth` — observable metrics (latency_ms, error_rate, queue_depth) with
+  composite `pressure_score` (latency 50% + error_rate 30% + queue_depth 20%)
+- `BackpressureController` — watermark-based consumer state machine with hysteresis
+  gap; high_watermark → THROTTLED; critical_watermark → PAUSED; falls back to NORMAL
+  only when pressure drops below low_watermark (prevents oscillation)
+- `DeadLetterRecord` — preserves original event + full retry history + final error
+  + per-error-type TTL (TRANSIENT=24h, RESOURCE_EXHAUSTED=1h, NON_RETRYABLE=indefinite)
+- `DeadLetterRouter` — triage buffer with `replay()` (re-inject) and `discard()` (audited)
+- `IntegrationPipelineProcessor` — combines all four patterns; evaluates backpressure
+  before each attempt; classifies errors before consuming retry budget
+
+Scenarios:
+- A: Normal pipeline — 3 events succeed without retries; dead-letter empty
+- B: Oracle ERP slowdown — BackpressureController signals THROTTLED; first attempt fails
+  (TRANSIENT); retry with jittered backoff succeeds; budget consumed=1
+- C: Permanent schema failure — NON_RETRYABLE classified; dead-lettered immediately;
+  retry budget unchanged (before=20, after=20); TTL=None (indefinite, human triage)
+- D: Retry storm demonstration — no-jitter shows all 5 consumers retry at t+2.00s
+  (synchronized convoy); full jitter spreads retries across [0, 16s] window;
+  tight budget (max=3) exhausted by first event; remaining 4 events dead-lettered
+  immediately without consuming budget
+
+**`docs/implementation-note-07.md`** — "Backpressure and Retry Storm Prevention:
+Why Most Integration Pipelines Fail Under Load":
+- The failure sequence from slow downstream to full retry storm
+- Error classification: why NON_RETRYABLE must bypass retry budget entirely
+- Full jitter formula and convoy prevention
+- Retry budget design: window sizing, budget sizing, relationship to saga timeouts
+- Backpressure watermark design: hysteresis gap, composite pressure score
+- Dead-letter queue: TTL by error type, replay vs. discard
+- What this pattern does not cover: distributed rate limiting, circuit breaker
+  persistence, priority queues, observability integration
+
+Closes #29.
+
+---
+
 ## [0.7.0] — 2026-04-13
 
 ### Added — Approval Workflow Example and Implementation Note
