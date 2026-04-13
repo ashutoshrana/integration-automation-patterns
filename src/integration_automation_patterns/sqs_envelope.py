@@ -159,7 +159,9 @@ class SQSEventEnvelope:
             queue_url=body.get("queue_url", ""),
             schema_version=body.get("schema_version", "1.0"),
             created_at=(
-                datetime.fromisoformat(body["created_at"]) if "created_at" in body else datetime.now(timezone.utc)
+                datetime.fromisoformat(body["created_at"].replace("Z", "+00:00"))
+                if "created_at" in body
+                else datetime.now(timezone.utc)
             ),
             message_group_id=message.get("Attributes", {}).get("MessageGroupId"),
             receipt_handle=message.get("ReceiptHandle"),

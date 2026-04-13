@@ -153,7 +153,7 @@ class GCPPubSubEnvelope:
         publish_time: datetime | None = None
         if publish_time_raw is not None:
             if isinstance(publish_time_raw, str):
-                publish_time = datetime.fromisoformat(publish_time_raw)
+                publish_time = datetime.fromisoformat(publish_time_raw.replace("Z", "+00:00"))
             elif hasattr(publish_time_raw, "isoformat"):
                 publish_time = publish_time_raw
 
@@ -165,7 +165,9 @@ class GCPPubSubEnvelope:
             topic=data.get("topic", ""),
             schema_version=data.get("schema_version", attributes.get("schema_version", "1.0")),
             created_at=(
-                datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(timezone.utc)
+                datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
+                if "created_at" in data
+                else datetime.now(timezone.utc)
             ),
             ordering_key=ordering_key or None,
             publish_time=publish_time,

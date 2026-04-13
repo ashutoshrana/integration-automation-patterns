@@ -213,7 +213,9 @@ class RabbitMQEnvelope:
             routing_key=routing_key,
             schema_version=data.get("schema_version", headers.get("schema_version", "1.0")),
             created_at=(
-                datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(timezone.utc)
+                datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
+                if "created_at" in data
+                else datetime.now(timezone.utc)
             ),
             correlation_id=correlation_id,
             reply_to=reply_to,

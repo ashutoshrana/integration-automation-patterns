@@ -143,7 +143,9 @@ class KafkaEventEnvelope:
             partition_key=partition_key,
             schema_version=data.get("schema_version", "1.0"),
             created_at=(
-                datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(timezone.utc)
+                datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
+                if "created_at" in data
+                else datetime.now(timezone.utc)
             ),
             headers=data.get("headers", {}),
             partition=partition,
