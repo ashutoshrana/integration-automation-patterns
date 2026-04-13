@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from threading import Lock
 
 
@@ -151,16 +152,19 @@ class TokenBucketRateLimiter:
                     self._tokens -= cost
                     return total_wait
 
+                # Snapshot inside the lock to avoid data race when raising outside it
+                tokens_snapshot = self._tokens
+
                 if not blocking:
-                    raise RateLimitExceeded(tokens_available=self._tokens, cost=cost)
+                    raise RateLimitExceeded(tokens_available=tokens_snapshot, cost=cost)
 
                 # Calculate how long until enough tokens are available
-                deficit = cost - self._tokens
+                deficit = cost - tokens_snapshot
                 wait_needed = deficit / self._refill_rate
 
             remaining = deadline - time.monotonic()
             if wait_needed > remaining:
-                raise RateLimitExceeded(tokens_available=self._tokens, cost=cost)
+                raise RateLimitExceeded(tokens_available=tokens_snapshot, cost=cost)
 
             sleep_time = min(wait_needed, remaining, 0.1)  # cap individual sleeps
             time.sleep(sleep_time)
@@ -198,12 +202,13 @@ class TokenBucketRateLimiter:
                     self._tokens -= cost
                     return total_wait
 
-                deficit = cost - self._tokens
+                tokens_snapshot = self._tokens
+                deficit = cost - tokens_snapshot
                 wait_needed = deficit / self._refill_rate
 
             remaining = deadline - time.monotonic()
             if wait_needed > remaining:
-                raise RateLimitExceeded(tokens_available=self._tokens, cost=cost)
+                raise RateLimitExceeded(tokens_available=tokens_snapshot, cost=cost)
 
             sleep_time = min(wait_needed, remaining, 0.05)
             await asyncio.sleep(sleep_time)
@@ -295,7 +300,7 @@ class SlidingWindowRateLimiter:
             raise ValueError("window_seconds must be positive")
         self._limit = limit
         self._window = window_seconds
-        self._timestamps: list[float] = []
+        self._timestamps: deque[float] = deque()
         self._lock = Lock()
 
     @property
@@ -336,13 +341,17 @@ class SlidingWindowRateLimiter:
             with self._lock:
                 now = time.monotonic()
                 self._evict(now)
-                if len(self._timestamps) < self._limit:
+                current_count = len(self._timestamps)
+                if current_count < self._limit:
                     self._timestamps.append(now)
                     return total_wait
 
+                # Snapshot inside the lock to avoid data race when raising outside it
+                slots_available = self._limit - current_count
+
                 if not blocking:
                     raise RateLimitExceeded(
-                        tokens_available=self._limit - len(self._timestamps),
+                        tokens_available=slots_available,
                         cost=1.0,
                     )
 
@@ -353,7 +362,7 @@ class SlidingWindowRateLimiter:
             remaining = deadline - time.monotonic()
             if wait_needed > remaining:
                 raise RateLimitExceeded(
-                    tokens_available=self._limit - len(self._timestamps),
+                    tokens_available=slots_available,
                     cost=1.0,
                 )
 
@@ -379,17 +388,19 @@ class SlidingWindowRateLimiter:
             with self._lock:
                 now = time.monotonic()
                 self._evict(now)
-                if len(self._timestamps) < self._limit:
+                current_count = len(self._timestamps)
+                if current_count < self._limit:
                     self._timestamps.append(now)
                     return total_wait
 
+                slots_available = self._limit - current_count
                 oldest = self._timestamps[0]
                 wait_needed = (oldest + self._window) - now
 
             remaining = deadline - time.monotonic()
             if wait_needed > remaining:
                 raise RateLimitExceeded(
-                    tokens_available=self._limit - len(self._timestamps),
+                    tokens_available=slots_available,
                     cost=1.0,
                 )
 
@@ -436,6 +447,6 @@ class SlidingWindowRateLimiter:
     def _evict(self, now: float) -> None:
         """Remove timestamps older than the window. Must hold ``_lock``."""
         cutoff = now - self._window
-        # Timestamps are appended in order; evict from the front
+        # Timestamps are appended in order; evict from the front in O(1) per pop
         while self._timestamps and self._timestamps[0] <= cutoff:
-            self._timestamps.pop(0)
+            self._timestamps.popleft()

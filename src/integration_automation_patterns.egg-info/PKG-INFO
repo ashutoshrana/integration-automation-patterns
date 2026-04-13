@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: integration-automation-patterns
-Version: 0.3.0
+Version: 0.4.1
 Summary: Reference patterns for reliable enterprise integration, workflow automation, and system-of-record synchronization.
 Author: Ashutosh Rana
 License-Expression: MIT
@@ -34,8 +34,12 @@ Requires-Dist: mypy>=1.0; extra == "typecheck"
 Provides-Extra: kafka
 Requires-Dist: kafka-python>=2.0; extra == "kafka"
 Provides-Extra: fastapi
-Requires-Dist: fastapi>=0.100.0; extra == "fastapi"
-Requires-Dist: httpx>=0.24.0; extra == "fastapi"
+Requires-Dist: fastapi>=0.130.0; extra == "fastapi"
+Requires-Dist: httpx>=0.27.0; extra == "fastapi"
+Provides-Extra: pydantic
+Requires-Dist: pydantic>=2.12.0; extra == "pydantic"
+Provides-Extra: all
+Requires-Dist: integration-automation-patterns[fastapi,kafka,pydantic]; extra == "all"
 Provides-Extra: dev
 Requires-Dist: integration-automation-patterns[fastapi,lint,test,typecheck]; extra == "dev"
 Dynamic: license-file

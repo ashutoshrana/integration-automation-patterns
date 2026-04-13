@@ -1,16 +1,22 @@
 
+[all]
+integration-automation-patterns[fastapi,kafka,pydantic]
+
 [dev]
 integration-automation-patterns[fastapi,lint,test,typecheck]
 
 [fastapi]
-fastapi>=0.100.0
-httpx>=0.24.0
+fastapi>=0.130.0
+httpx>=0.27.0
 
 [kafka]
 kafka-python>=2.0
 
 [lint]
 ruff>=0.4.0
+
+[pydantic]
+pydantic>=2.12.0
 
 [test]
 pytest>=7.0

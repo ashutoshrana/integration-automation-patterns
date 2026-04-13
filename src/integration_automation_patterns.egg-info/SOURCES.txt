@@ -7,6 +7,8 @@ src/integration_automation_patterns/circuit_breaker.py
 src/integration_automation_patterns/event_envelope.py
 src/integration_automation_patterns/kafka_envelope.py
 src/integration_automation_patterns/outbox.py
+src/integration_automation_patterns/py.typed
+src/integration_automation_patterns/rate_limiter.py
 src/integration_automation_patterns/saga.py
 src/integration_automation_patterns/sync_boundary.py
 src/integration_automation_patterns/webhook_handler.py
