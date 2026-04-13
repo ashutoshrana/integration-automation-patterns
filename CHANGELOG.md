@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.21.0] — 2026-04-13
+
+### Added — Event Sourcing & CQRS Patterns (AggregateRoot + EventStore + Projection + Snapshot)
+
+**`examples/22_event_sourcing_cqrs_patterns.py`** — advanced event sourcing and CQRS patterns
+for enterprise domain modeling with append-only event persistence, optimistic concurrency
+control, read-model projections, and aggregate snapshot optimization.
+
+**New classes:**
+- `DomainEvent` — frozen dataclass (aggregate_id, event_type, payload, version, occurred_at)
+- `ConcurrencyConflict` — exception with expected_version and actual_version for optimistic locking
+- `InsufficientFunds`, `AccountNotFound`, `AccountAlreadyClosed` — domain exceptions
+- `AggregateRoot` — base class with domain event collection; `apply()` dispatches to `on_<EventType>` handlers; `raise_event()` creates and registers events; `mark_committed()` clears uncommitted
+- `BankAccount` — concrete aggregate with AccountOpened / MoneyDeposited / MoneyWithdrawn / AccountClosed events
+- `EventStore` — append-only in-memory store with optimistic concurrency; `append(id, events, expected_version)` raises `ConcurrencyConflict` on version mismatch; `load(id, from_version)` for partial loads
+- `Snapshot` — aggregate state snapshot at a version checkpoint
+- `SnapshotStore` — saves/loads snapshots per aggregate ID
+- `AccountBalanceProjection` — builds balance read model from event stream; `rebuild()` from full history; `reset()` for replay
+- `EventSourcedRepository` — combines EventStore + SnapshotStore; auto-snapshots at configurable threshold; `load()` reconstitutes from snapshot + subsequent events
+
+**Tests:** 37 tests — all passing.
+
+---
+
 ## [0.20.0] — 2026-04-13
 
 ### Added — API Gateway Patterns (Rate Limiting + Request/Response Transformation + Version Routing + Composition)
