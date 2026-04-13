@@ -6,6 +6,28 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.25.0] — 2026-04-13
+
+### Added — GraphQL API Patterns (`26_graphql_patterns.py`)
+
+GraphQL layer patterns for enterprise API design:
+
+- `GraphQLSchema` — type registry with SDL builder; non-nullable `!` and list `[Type]` support; triple-quoted field descriptions
+- `ResolverRegistry` — decorator-based `@register(type, field)` dispatch; `ResolverError` on unregistered field
+- `DataLoader` — N+1 prevention via batched key loading; `load(key)` queues, `dispatch()` calls batch_fn once; `prime()` pre-populates cache; thread-safe
+- `CursorPagination` — Relay spec; base64 `cursor:<offset>` encoding; `first/after/last/before` support; returns edges + page_info + total_count
+- `FieldAuthorizationPolicy` — role set OR-semantics; default-allow for unregistered fields
+- `SubscriptionManager` — pub/sub with `threading.Lock`; callbacks called outside lock to prevent deadlocks
+
+46 new tests. Total: **741 passed**.
+
+### Changed — No real organization names in any code or documentation
+
+Replaced all `strayer` references with `acme-corp` in examples.
+
+---
+
+
 ## [0.24.0] — 2026-04-13
 
 ### Added — Schema Registry Patterns (`25_schema_registry_patterns.py`)

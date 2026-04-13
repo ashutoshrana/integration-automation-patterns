@@ -171,7 +171,7 @@ def make_lead_converted_event(event_id: str | None = None) -> EventEnvelope:
             "lead_id": "00Q8a000002EwbXEAS",
             "contact_id": "0038a000004QlGkAAK",
             "account_id": "0018a000002PjXoAAK",
-            "converted_by": "user:j.chen@strayer.edu",
+            "converted_by": "user:j.chen@acme-corp.com",
             "converted_at": "2026-04-12T14:30:00Z",
             "sync_target": "sap_s4",
         },

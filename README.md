@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 25 examples, 695 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 26 examples, 741 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 25 patterns
+## Example catalog — 26 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -115,6 +115,7 @@ conflicts = boundary.detect_conflict(
 | 23 | `23_service_mesh_resilience.py` | Service Mesh Resilience | Bulkhead (concurrent slot control, BulkheadRejected) + TimeoutHierarchy (operation/service/request tiers) + HealthCheckAggregator (HEALTHY/DEGRADED/UNHEALTHY) + RetryWithJitter (exponential backoff + full jitter) |
 | 24 | `24_distributed_tracing_patterns.py` | Distributed Tracing | W3C TraceContext (traceparent header) + Span (OTLP-compatible) + Tracer + AlwaysSample/NeverSample/RatioSampler + InMemorySpanExporter + TracerProvider + W3C Baggage |
 | 25 | `25_schema_registry_patterns.py` | Schema Registry | InMemorySchemaRegistry (all 7 CompatibilityLevels) + AvroSchemaEvolution (backward/forward/full) + ConfluentFramingCodec (wire format) + JsonSchemaSerializer + SchemaEvolutionMigrator |
+| 26 | `26_graphql_patterns.py` | GraphQL API | GraphQLSchema (SDL builder) + ResolverRegistry (decorator dispatch) + DataLoader (N+1 prevention, batch + prime) + CursorPagination (Relay spec) + FieldAuthorizationPolicy + SubscriptionManager |
 
 ---
 
@@ -189,8 +190,8 @@ src/integration_automation_patterns/
 ├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
 └── cdc_event.py              # CDC event types (Debezium-compatible)
-examples/                     # 25 runnable pattern examples (see catalog above)
-tests/                        # 614 passing tests
+examples/                     # 26 runnable pattern examples (see catalog above)
+tests/                        # 741 passing tests
 docs/
 ├── architecture.md
 ├── implementation-note-01.md # Event-driven integration reliability
@@ -211,9 +212,9 @@ docs/
 
 ## Near-term roadmap
 
-- `24_distributed_tracing_patterns.py` — Trace propagation across services (W3C TraceContext)
-- `25_schema_registry_patterns.py` — Confluent Schema Registry + Avro evolution
+- GraphQL subscriptions with WebSocket transport
 - Kafka + FastAPI integration examples with async support
+- gRPC bidirectional streaming patterns
 
 ---
 
@@ -230,7 +231,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.22.0},
+  version = {0.25.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -242,9 +243,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 32 sectors · 32 regulations · 997 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 24 governance examples · 12 jurisdictions · 1088 tests |
-| **integration-automation-patterns** | How data flows | 25 patterns · schema registry · distributed tracing · 695 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 33 sectors · 33 regulations · 1033 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 25 governance examples · 13 jurisdictions · 1153 tests |
+| **integration-automation-patterns** | How data flows | 26 patterns · schema registry · GraphQL · 741 tests |
 
 ---
 
