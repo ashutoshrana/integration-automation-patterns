@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 41 patterns
+## Example catalog — 43 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -131,6 +131,11 @@ conflicts = boundary.detect_conflict(
 | 39 | `39_distributed_tracing_patterns.py` | Distributed Tracing / Observability | TraceContext (W3C traceparent: uuid4 trace_id/span_id, to_traceparent/from_traceparent, child_context(), sampling_flag) + Span (start/finish timing, add_event, set_status OK/ERROR/UNSET, to_dict() serialization, live duration_ms) + Tracer (active+completed span lists, threading.Lock, get_trace sorted by start_time, export) + SamplingStrategy (deterministic hash-based: always_on/always_off/ratio, should_sample) + TraceExporter (get_by_service/get_errors/get_slow_spans filters, clear) |
 | 40 | `40_saga_choreography_patterns.py` | Saga Choreography / Distributed Transactions | SagaEvent (frozen dataclass: event_id/saga_id/event_type/payload/timestamp/sequence, create() classmethod UUID factory) + SagaParticipant (execute/compensate with event recording, executed_count/compensated_count) + SagaChoreographer (event bus: register_handler, start/complete/fail_saga, publish_event collects responses, get_saga_status/events) + CompensationEngine (reverse-order rollback: record_execution, compensate_all() reverses execution list, compensation_count) + SagaMonitor (configurable timeout_seconds, record_start/end, is_timed_out, get_stats 5-bucket, get_timed_out_sagas) |
 | 41 | `41_api_versioning_patterns.py` | API Versioning / Contract Testing | SemanticVersion (frozen dataclass: parse "1.2.3", is_compatible_with same major + minor>=, is_breaking_change_from major>, rich comparisons) + APIContract (validate_request missing required fields, validate_response expected fields, is_backward_compatible_with older contract) + VersionRouter (exact-match first then highest-compatible-minor fallback, ValueError when no match, available_versions/latest_version) + ChangelogEntry (BREAKING/FEATURE/FIX, is_breaking()) + APIVersionManager (register_version, deprecate, get_supported_versions non-deprecated, get_changelog/get_breaking_changes with optional since_version filter) |
+
+**Agentic & Runtime Security (2025–2026 Standards)**
+
+| 42 | `42_mcp_security_patterns.py` | MCP / Tool Security | MCPToolDefinition (immutable tool spec with SHA-256 checksum), MCPSecurityValidator (source allowlist + metadata + permission + checksum integrity), MCPToolRegistry (origin-allowlisted registration + duplicate detection), MCPInvocationGuard (pre-invocation policy enforcement + full audit trail), MCPRateLimiter (per-tool sliding-window rate limit) — guards against CVE-2025-6514 class MCP command injection, malicious MCP package supply-chain attack (Sept 2025), and unvetted tool composition |
+| 43 | `43_agentic_security_auditor.py` | Enterprise Agentic Security Audit | Holistic agentic AI security gap-analysis framework — AgenticSystemConfig (25-field configuration across 7 domains), AgenticSecurityAuditor (28 controls: Tool Permission, MCP Security, Identity & Auth, Memory & Context, Multi-Agent, Observability, HITL; conditional SKIP for undeployed domains), AgentAuditReport (scored 0–100, Sandbox/Controlled/Trusted/Autonomous maturity), framework refs: OWASP ASI 2026, OWASP LLM 2025, NIST AI 600-1, MITRE ATLAS v5.1, CSA ATF, CVE-2025-6514, SOC 2, ISO 42001 |
 
 ---
 
