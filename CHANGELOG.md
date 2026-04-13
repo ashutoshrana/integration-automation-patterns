@@ -6,6 +6,33 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.20.0] — 2026-04-13
+
+### Added — API Gateway Patterns (Rate Limiting + Request/Response Transformation + Version Routing + Composition)
+
+**`examples/21_api_gateway_patterns.py`** — API gateway patterns for enterprise integration
+platforms: token-bucket rate limiting per client, declarative request/response transformation,
+API version routing with handler registry, and fan-out API composition with parallel execution.
+Applicable to API gateway implementations, BFF (Backend for Frontend) layers, and
+service aggregation patterns.
+
+**New classes:**
+- `APIRequest` — request dataclass (client_id, method, path, version, headers, body, timestamp)
+- `APIResponse` — response dataclass (status_code, headers, body, latency_ms, backend_calls)
+- `RateLimitConfig` — token-bucket configuration (requests_per_second, burst_size)
+- `TransformRule` — declarative transform specification (field_path, action, target)
+- `RateLimitExceeded` — exception with client_id and retry_after_seconds
+- `UnsupportedVersion` — exception with version and supported list
+- `RateLimiter` — thread-safe token-bucket per client; `consume()` and `get_token_count()`
+- `RequestTransformer` — header injection, body field renaming, URL prefix rewriting
+- `ResponseTransformer` — status code remapping and response body field masking
+- `APIVersionRouter` — handler registry by version string; `route()` dispatch
+- `APIComposer` — sequential and parallel fan-out to multiple backends with response merge
+
+**Tests:** 31 tests — all passing.
+
+---
+
 ## [0.19.0] — 2026-04-13
 
 ### Added — Data Pipeline Patterns (ETL with Checkpointing + Data Quality Validation + Metrics)
