@@ -6,6 +6,43 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.16.0] — 2026-04-13
+
+### Added — Resilience Patterns (Circuit Breaker + Bulkhead + Rate Limiter + Retry with Jitter)
+
+**`examples/17_resilience_patterns.py`** — four complementary microservice resilience patterns
+covering the complete fault-tolerance stack: circuit breaking for dependency failure isolation,
+bulkhead thread-pool separation for concurrency containment, token bucket rate limiting with
+per-identity burst capacity, and exponential backoff with full jitter for safe retry behavior.
+
+**New classes:**
+- `CircuitBreakerState` — CLOSED / OPEN / HALF_OPEN state machine
+- `CircuitBreakerOpenError` — raised immediately when circuit is OPEN, treated as non-retryable
+- `CircuitBreakerConfig` — failure_rate_threshold, slow_call_rate_threshold,
+  slow_call_duration_threshold, minimum_calls, sliding_window_size, wait_duration_in_open_state,
+  permitted_calls_in_half_open
+- `SlidingWindowCircuitBreaker` — sliding deque of outcomes; evaluates failure/slow-call rate
+  after minimum_calls; `_check_half_open_transition()` transitions OPEN→HALF_OPEN after wait;
+  probe success → CLOSED; probe failure → OPEN; context manager support
+- `BulkheadFullError` — raised when BulkheadPool capacity is exceeded
+- `BulkheadPool` — fixed-concurrency isolation with `acquire()`/`release()`/`call(fn)`;
+  `active_calls` and `available` properties; thread-safe; context manager support
+- `TokenBucketState` — per-identity mutable token bucket (tokens + last_refill timestamp)
+- `BurstAwareRateLimiter` — per-identity token bucket with configurable refill rate and burst
+  capacity; `acquire(identity)` raises `RateLimitExceeded` when empty; `tokens_available(identity)`
+  for inspection; thread-safe with per-limiter lock
+- `RateLimitExceeded` — raised when identity has exhausted burst capacity
+- `RetryConfig` — max_attempts=3, base_delay=0.1s, max_delay=30.0s, jitter_factor=1.0,
+  non_retryable exception set (defaults to `{CircuitBreakerOpenError}`)
+- `JitteredRetryPolicy` — `execute(fn)`: full jitter delay `random.uniform(0, min(max_delay,
+  base × 2^attempt))`; CircuitBreakerOpenError → no retry; non_retryable → no retry;
+  `execute_with_breaker(fn, circuit_breaker)` wraps fn in circuit breaker call
+
+**Test coverage:** 34 tests across all four patterns, including thread-safety validation for
+BulkheadPool concurrent access and BurstAwareRateLimiter concurrent acquires.
+
+---
+
 ## [0.15.0] — 2026-04-13
 
 ### Added — Event Sourcing and CQRS Patterns (EventStore + Aggregate + Projection + Snapshot)
