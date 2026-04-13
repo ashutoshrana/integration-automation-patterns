@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 26 examples, 741 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 27 examples, 792 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 26 patterns
+## Example catalog — 27 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -116,6 +116,7 @@ conflicts = boundary.detect_conflict(
 | 24 | `24_distributed_tracing_patterns.py` | Distributed Tracing | W3C TraceContext (traceparent header) + Span (OTLP-compatible) + Tracer + AlwaysSample/NeverSample/RatioSampler + InMemorySpanExporter + TracerProvider + W3C Baggage |
 | 25 | `25_schema_registry_patterns.py` | Schema Registry | InMemorySchemaRegistry (all 7 CompatibilityLevels) + AvroSchemaEvolution (backward/forward/full) + ConfluentFramingCodec (wire format) + JsonSchemaSerializer + SchemaEvolutionMigrator |
 | 26 | `26_graphql_patterns.py` | GraphQL API | GraphQLSchema (SDL builder) + ResolverRegistry (decorator dispatch) + DataLoader (N+1 prevention, batch + prime) + CursorPagination (Relay spec) + FieldAuthorizationPolicy + SubscriptionManager |
+| 27 | `27_event_driven_workflow_patterns.py` | Event-Driven Workflows | EventBus (pub/sub + wildcard) + EventSourcingWorkflow (append-only log + state replay) + ChoreographySaga (event-driven saga, no orchestrator) + DeadLetterQueue (retry + DLQ + recovery) + EventFilter (predicate chain + transformer chain) |
 
 ---
 
@@ -190,8 +191,8 @@ src/integration_automation_patterns/
 ├── kafka_envelope.py         # Kafka envelope: partition key, DLQ, schema version
 ├── webhook_handler.py        # HMAC-SHA256 webhook verification + idempotency
 └── cdc_event.py              # CDC event types (Debezium-compatible)
-examples/                     # 26 runnable pattern examples (see catalog above)
-tests/                        # 741 passing tests
+examples/                     # 27 runnable pattern examples (see catalog above)
+tests/                        # 792 passing tests
 docs/
 ├── architecture.md
 ├── implementation-note-01.md # Event-driven integration reliability
@@ -231,7 +232,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
   author  = {Rana, Ashutosh},
   title   = {integration-automation-patterns: Enterprise integration reliability patterns},
   year    = {2026},
-  version = {0.25.0},
+  version = {0.26.0},
   url     = {https://github.com/ashutoshrana/integration-automation-patterns},
   license = {MIT}
 }
@@ -243,9 +244,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 33 sectors · 33 regulations · 1033 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 25 governance examples · 13 jurisdictions · 1153 tests |
-| **integration-automation-patterns** | How data flows | 26 patterns · schema registry · GraphQL · 741 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 34 sectors · 36 regulations · 1069 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 26 governance examples · 14 jurisdictions · 1225 tests |
+| **integration-automation-patterns** | How data flows | 27 patterns · schema registry · GraphQL · 792 tests |
 
 ---
 

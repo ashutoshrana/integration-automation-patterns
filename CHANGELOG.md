@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.26.0] — 2026-04-13
+
+### Added — Event-Driven Workflow Patterns (`27_event_driven_workflow_patterns.py`)
+
+Event-driven choreography patterns as complement to orchestration:
+
+- `EventBus` — pub/sub with wildcard `"*"` handlers; lock-free handler dispatch (snapshot under lock, call outside); thread-safe subscribe/unsubscribe
+- `EventSourcingWorkflow` — append-only event log; `replay(up_to_seq)` for point-in-time reconstruction; `current_state` pure fold over log; transitions: started/step_completed/completed/failed/compensated
+- `ChoreographySaga` — saga via event bus subscriptions (no central orchestrator); `compensate_from(failed_step)` reverses completed steps in order
+- `DeadLetterQueue` — configurable max_retries; DLQ promotion on exhaustion; `retry_dead_letters()` for recovery; tracks retry count by event identity
+- `EventFilter` — named predicate filters + named transformers; short-circuits on first failing filter; transformers chain left-to-right
+
+51 new tests. Total: **792 passed**.
+
+---
+
+
 ## [0.25.0] — 2026-04-13
 
 ### Added — GraphQL API Patterns (`26_graphql_patterns.py`)
