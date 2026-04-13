@@ -6,6 +6,39 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.14.0] — 2026-04-13
+
+### Added — Distributed Saga Orchestration Patterns (Orchestration + Choreography + Outbox + DLQ)
+
+**`examples/15_saga_orchestration_patterns.py`** — four complementary patterns that together
+provide reliable distributed transaction semantics without two-phase commit, covering all major
+failure modes in microservices workflows.
+
+**New classes:**
+- `SagaStatus` — RUNNING / COMPLETED / COMPENSATING / COMPENSATED / FAILED
+- `SagaStepStatus` — PENDING / COMPLETED / FAILED / COMPENSATED / COMPENSATION_FAILED
+- `SagaStep` (dataclass) — action + compensate callables with per-step status tracking
+- `SagaExecution` (dataclass) — saga_id, shared context dict, completed_steps list, failure info
+- `SagaOrchestrator` — executes steps in order; on failure triggers reverse-order compensation;
+  doubles compensation timeout on cascading failures; FAILED status if compensation itself fails
+- `ChoreographyEvent` (dataclass) — event_id, event_type, aggregate_id, payload, timestamp
+- `ChoreographyEventBus` — thread-safe pub/sub with subscribe/unsubscribe/emit; handler exceptions
+  caught without affecting other handlers; `published_events` property for test inspection
+- `OutboxMessageStatus` — PENDING / PUBLISHED / FAILED
+- `OutboxMessage` (dataclass) — transactional outbox entry with retry_count and published_at
+- `OutboxStore` — in-memory store with save, get_pending (batch), mark_published, mark_failed,
+  all_messages
+- `OutboxPoller` — batch poll cycle: publisher callable → mark_published on success → mark_failed
+  on exception; skips messages exceeding max_retries; returns published count
+- `DLQMessageStatus` — DEAD / REPLAYED / DISCARDED
+- `DLQMessage` (dataclass) — original_message_id, queue_name, payload, failure_reason, attempt_count
+- `DeadLetterQueue` — enqueue, replay (handler callable + REPLAYED status + replayed_at), discard,
+  list_messages (filterable by status + queue_name), size; thread-safe with per-operation locking
+
+**Tests:** 46 new tests in `tests/test_saga_orchestration_patterns.py`
+
+---
+
 ## [0.13.0] — 2026-04-13
 
 ### Added — API Gateway Patterns (Rate Limiting + Circuit Breaker + Coalescing + API Keys + Versioning + Idempotency)
