@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.36.0] — 2026-04-13
+
+### Added — Workflow State Machine Patterns (`36_workflow_state_machine.py`)
+
+Five pure-Python workflow and state machine primitives:
+
+- `StateMachine` — FSM with `add_state` (on_enter/on_exit callbacks) + `add_transition` (guard condition + action) + `trigger` (guard → on_exit → action → on_enter) + `can_trigger`
+- `HierarchicalStateMachine` — composite states via `add_child_state` + `set_initial_child`; `enter_state` auto-descends recursively; `is_in_state` walks ancestor chain
+- `WorkflowEngine` — multi-step orchestrator: per-step `max_retries` + exponential backoff (0.05s × 2^attempt) + `timeout_ms` via ThreadPoolExecutor; `WorkflowResult` dataclass
+- `ConditionalRouter` — first-match conditional routing: `register_route`/`register_default`/`route`; raises `ValueError` on no match without default
+- `ParallelWorkflow` — ThreadPoolExecutor concurrent tasks: `run` with timeout support + `run_until_first_success` cancels remaining, raises `RuntimeError` if all fail
+
+70 new tests. Total: **1429 passed**.
+
+---
+
 ## [0.35.0] — 2026-04-13
 
 ### Added — Advanced Event Sourcing Patterns (`35_event_sourcing_advanced.py`)
