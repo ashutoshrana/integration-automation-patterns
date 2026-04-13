@@ -18,8 +18,8 @@ import queue
 import sys
 import threading
 import types
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, Optional
 
 import pytest
 
@@ -27,11 +27,7 @@ import pytest
 # Module loader
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent
-    / "examples"
-    / "28_grpc_streaming_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "28_grpc_streaming_patterns.py"
 
 
 def _load_module():
@@ -94,6 +90,7 @@ class TestUnaryUnary:
     def test_call_with_metadata_server_time_is_recent(self, m):
         """server_time is within the last 5 seconds (sanity check)."""
         import time
+
         rpc = m.UnaryUnary(handler=lambda req: {})
         _, meta = rpc.call_with_metadata({}, {})
         assert abs(meta["server_time"] - time.time()) < 5.0
@@ -120,9 +117,14 @@ class TestUnaryUnary:
 
     def test_add_interceptor_appends_to_list(self, m):
         """add_interceptor appends the callable to the interceptors list."""
+
+        def fn1(req):
+            return req
+
+        def fn2(req):
+            return req
+
         rpc = m.UnaryUnary(handler=lambda req: req)
-        fn1 = lambda req: req
-        fn2 = lambda req: req
         rpc.add_interceptor(fn1)
         rpc.add_interceptor(fn2)
         assert rpc.interceptors == [fn1, fn2]
@@ -138,7 +140,7 @@ class TestUnaryUnary:
     def test_call_without_interceptors_passes_request_directly(self, m):
         """With no interceptors, the original request is passed to the handler unchanged."""
         captured = []
-        rpc = m.UnaryUnary(handler=lambda req: (captured.append(req) or {}))
+        rpc = m.UnaryUnary(handler=lambda req: captured.append(req) or {})
         original = {"key": "value"}
         rpc.call(original)
         assert captured[0] is original
@@ -154,9 +156,11 @@ class TestServerStreaming:
 
     def _make_range_handler(self, count: int):
         """Helper: creates a handler that yields ``count`` dicts."""
+
         def handler(req: dict) -> Iterator[dict]:
             for i in range(req.get("count", count)):
                 yield {"index": i}
+
         return handler
 
     def test_call_yields_all_items(self, m):
@@ -221,7 +225,6 @@ class TestServerStreaming:
 
     def test_call_is_generator(self, m):
         """call() returns a generator (lazy evaluation)."""
-        import types as _types
         rpc = m.ServerStreaming(handler=self._make_range_handler(3))
         result = rpc.call({"count": 3})
         assert hasattr(result, "__iter__") and hasattr(result, "__next__")
@@ -238,7 +241,7 @@ class TestClientStreaming:
     def test_call_passes_list_to_handler(self, m):
         """call() passes the entire request list to the handler."""
         captured = []
-        rpc = m.ClientStreaming(handler=lambda reqs: (captured.extend(reqs) or {}))
+        rpc = m.ClientStreaming(handler=lambda reqs: captured.extend(reqs) or {})
         rpc.call([{"a": 1}, {"a": 2}])
         assert len(captured) == 2
 
@@ -256,9 +259,7 @@ class TestClientStreaming:
 
     def test_call_aggregates_values(self, m):
         """An aggregation handler correctly sums values from all requests."""
-        rpc = m.ClientStreaming(
-            handler=lambda reqs: {"total": sum(r.get("value", 0) for r in reqs)}
-        )
+        rpc = m.ClientStreaming(handler=lambda reqs: {"total": sum(r.get("value", 0) for r in reqs)})
         resp = rpc.call([{"value": 10}, {"value": 20}, {"value": 30}])
         assert resp == {"total": 60}
 
@@ -272,9 +273,11 @@ class TestClientStreaming:
     def test_stream_and_call_preserves_order(self, m):
         """stream_and_call() preserves the generator's item order."""
         order = []
+
         def capture_handler(reqs):
             order.extend(reqs)
             return {}
+
         rpc = m.ClientStreaming(handler=capture_handler)
         gen = ({"seq": i} for i in [3, 1, 4, 1, 5])
         rpc.stream_and_call(gen)
@@ -295,9 +298,11 @@ class TestClientStreaming:
     def test_handler_receives_all_requests_once(self, m):
         """The handler is called exactly once with all requests."""
         call_count = [0]
+
         def handler(reqs):
             call_count[0] += 1
             return {"n": len(reqs)}
+
         rpc = m.ClientStreaming(handler=handler)
         rpc.call([{"x": 1}, {"x": 2}])
         assert call_count[0] == 1
@@ -331,14 +336,18 @@ class TestBidirectionalStreaming:
 
     def test_none_responses_are_skipped(self, m):
         """Requests for which the handler returns None are excluded from results."""
-        def handler(req: dict) -> Optional[dict]:
+
+        def handler(req: dict) -> dict | None:
             return None if req.get("skip") else {"kept": True}
+
         rpc = m.BidirectionalStreaming(handler=handler)
-        responses = rpc.call([
-            {"skip": False},
-            {"skip": True},
-            {"skip": False},
-        ])
+        responses = rpc.call(
+            [
+                {"skip": False},
+                {"skip": True},
+                {"skip": False},
+            ]
+        )
         assert len(responses) == 2
         assert all(r["kept"] is True for r in responses)
 
@@ -361,8 +370,10 @@ class TestBidirectionalStreaming:
 
     def test_response_count_increments_for_non_none(self, m):
         """response_count counts only non-None responses."""
-        def handler(req: dict) -> Optional[dict]:
+
+        def handler(req: dict) -> dict | None:
             return None if req.get("skip") else {}
+
         rpc = m.BidirectionalStreaming(handler=handler)
         rpc.call([{"skip": False}, {"skip": True}, {"skip": False}])
         assert rpc.response_count == 2
@@ -393,8 +404,10 @@ class TestBidirectionalStreaming:
 
     def test_call_with_queue_skips_none_responses(self, m):
         """call_with_queue() does not put None responses into the output queue."""
-        def handler(req: dict) -> Optional[dict]:
+
+        def handler(req: dict) -> dict | None:
             return None if req.get("skip") else {"kept": True}
+
         rpc = m.BidirectionalStreaming(handler=handler)
         in_q: queue.Queue = queue.Queue()
         out_q: queue.Queue = queue.Queue()
@@ -517,7 +530,7 @@ class TestStreamingInterceptor:
         interceptor = m.StreamingInterceptor()
         interceptor.add_request_transform("double", lambda r: {**r, "n": r.get("n", 0) * 2})
 
-        def handler(req: dict) -> Optional[dict]:
+        def handler(req: dict) -> dict | None:
             return {"result": req["n"]}
 
         wrapped = interceptor.wrap_bidirectional(handler)

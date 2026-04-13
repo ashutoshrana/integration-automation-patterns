@@ -24,9 +24,7 @@ import pytest
 # Module loader
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "19_workflow_orchestration_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "19_workflow_orchestration_patterns.py"
 
 
 def _load_module():

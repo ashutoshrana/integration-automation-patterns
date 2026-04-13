@@ -8,11 +8,11 @@ Health Check Aggregator, and Retry with Jitter resilience patterns.
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import threading
 import time
 import types
-import os
 from datetime import datetime
 
 import pytest
@@ -22,8 +22,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _name = "service_mesh_resilience_23"
-_path = os.path.join(os.path.dirname(__file__), "..", "examples",
-                     "23_service_mesh_resilience.py")
+_path = os.path.join(os.path.dirname(__file__), "..", "examples", "23_service_mesh_resilience.py")
 
 
 def _load():
@@ -49,14 +48,12 @@ def m():
 class TestBulkhead:
     # 1 — basic execution: returns callable's return value
     def test_execute_returns_result(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=2, max_queue_size=0,
-                                                  timeout_seconds=1.0))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=2, max_queue_size=0, timeout_seconds=1.0))
         assert bh.execute(lambda: 42) == 42
 
     # 2 — permits exactly max_concurrent simultaneous callers
     def test_permits_max_concurrent(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=3, max_queue_size=0,
-                                                  timeout_seconds=1.0))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=3, max_queue_size=0, timeout_seconds=1.0))
         results = []
         barrier = threading.Barrier(3)
 
@@ -75,8 +72,7 @@ class TestBulkhead:
     # 3 — BulkheadRejected raised when queue is full
     def test_rejected_when_queue_full(self, m):
         # max_concurrent=1, max_queue_size=0 → second concurrent caller rejected
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=0,
-                                                  timeout_seconds=0.05))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=0, timeout_seconds=0.05))
         entered = threading.Event()
         release = threading.Event()
 
@@ -99,8 +95,7 @@ class TestBulkhead:
 
     # 5 — queued callers eventually succeed when a slot opens
     def test_queued_caller_succeeds_when_slot_opens(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1,
-                                                  timeout_seconds=2.0))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1, timeout_seconds=2.0))
         results = []
         entered = threading.Event()
         release = threading.Event()
@@ -126,8 +121,7 @@ class TestBulkhead:
 
     # 6 — timeout raises BulkheadRejected (not hangs forever)
     def test_timeout_raises_bulkhead_rejected(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1,
-                                                  timeout_seconds=0.05))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1, timeout_seconds=0.05))
         entered = threading.Event()
         release = threading.Event()
 
@@ -147,8 +141,7 @@ class TestBulkhead:
 
     # 7 — queue rejection when queue full (second waiter with queue_size=1)
     def test_queue_overflow_rejected(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1,
-                                                  timeout_seconds=5.0))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=1, max_queue_size=1, timeout_seconds=5.0))
         entered = threading.Event()
         release = threading.Event()
         first_queued = threading.Event()
@@ -182,16 +175,14 @@ class TestBulkhead:
 
     # 8 — BulkheadConfig is a dataclass with expected fields
     def test_bulkhead_config_fields(self, m):
-        cfg = m.BulkheadConfig(max_concurrent=5, max_queue_size=10,
-                               timeout_seconds=2.5)
+        cfg = m.BulkheadConfig(max_concurrent=5, max_queue_size=10, timeout_seconds=2.5)
         assert cfg.max_concurrent == 5
         assert cfg.max_queue_size == 10
         assert cfg.timeout_seconds == 2.5
 
     # 9 — exception from wrapped callable propagates through bulkhead
     def test_exception_propagates(self, m):
-        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=2, max_queue_size=0,
-                                                  timeout_seconds=1.0))
+        bh = m.Bulkhead("svc", m.BulkheadConfig(max_concurrent=2, max_queue_size=0, timeout_seconds=1.0))
         with pytest.raises(ValueError, match="boom"):
             bh.execute(lambda: (_ for _ in ()).throw(ValueError("boom")))
 
@@ -314,7 +305,7 @@ class TestHealthCheckAggregator:
         agg = m.HealthCheckAggregator(latency_threshold_ms=1.0)
 
         def slow_but_healthy():
-            time.sleep(0.05)   # 50 ms >> 1 ms threshold
+            time.sleep(0.05)  # 50 ms >> 1 ms threshold
             return True
 
         agg.register("svc", slow_but_healthy)
@@ -362,14 +353,13 @@ class TestHealthCheckAggregator:
 class TestRetryWithJitter:
     # 29 — retries up to max_attempts and raises RetryExhausted
     def test_exhausts_retries(self, m):
-        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5,
-                            jitter=False)
+        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5, jitter=False)
         retry = m.RetryWithJitter(cfg)
         counter = {"n": 0}
 
         def always_fail():
             counter["n"] += 1
-            raise IOError("fail")
+            raise OSError("fail")
 
         with pytest.raises(m.RetryExhausted) as exc_info:
             retry.execute(always_fail)
@@ -379,8 +369,7 @@ class TestRetryWithJitter:
 
     # 30 — RetryExhausted carries last_error
     def test_retry_exhausted_last_error(self, m):
-        cfg = m.RetryConfig(max_attempts=2, base_delay_ms=1, max_delay_ms=5,
-                            jitter=False)
+        cfg = m.RetryConfig(max_attempts=2, base_delay_ms=1, max_delay_ms=5, jitter=False)
         retry = m.RetryWithJitter(cfg)
         err = ValueError("root cause")
 
@@ -394,8 +383,7 @@ class TestRetryWithJitter:
 
     # 31 — succeeds on 3rd attempt, returns value
     def test_success_on_third_attempt(self, m):
-        cfg = m.RetryConfig(max_attempts=4, base_delay_ms=1, max_delay_ms=5,
-                            jitter=False)
+        cfg = m.RetryConfig(max_attempts=4, base_delay_ms=1, max_delay_ms=5, jitter=False)
         retry = m.RetryWithJitter(cfg)
         counter = {"n": 0}
 
@@ -412,8 +400,7 @@ class TestRetryWithJitter:
     # 32 — jitter=False produces deterministic (non-zero for attempt>0) delay
     def test_jitter_false_deterministic(self, m):
         # Verify _compute_delay is reproducible when jitter=False
-        cfg = m.RetryConfig(max_attempts=5, base_delay_ms=100, max_delay_ms=800,
-                            jitter=False)
+        cfg = m.RetryConfig(max_attempts=5, base_delay_ms=100, max_delay_ms=800, jitter=False)
         retry = m.RetryWithJitter(cfg)
         d0 = retry._compute_delay(0)
         d1 = retry._compute_delay(1)
@@ -427,8 +414,7 @@ class TestRetryWithJitter:
 
     # 33 — jitter=True produces random delays bounded by max_delay_ms
     def test_jitter_true_bounded(self, m):
-        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=100, max_delay_ms=500,
-                            jitter=True)
+        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=100, max_delay_ms=500, jitter=True)
         retry = m.RetryWithJitter(cfg)
         for _ in range(20):
             delay = retry._compute_delay(2)
@@ -460,10 +446,8 @@ class TestIntegration:
 class TestIntegrationPatterns:
     # Integration test A — bulkhead + retry composition: bulkhead permits, retry fires on failures
     def test_bulkhead_with_retry(self, m):
-        bh = m.Bulkhead("int-svc", m.BulkheadConfig(
-            max_concurrent=2, max_queue_size=2, timeout_seconds=2.0))
-        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5,
-                            jitter=False)
+        bh = m.Bulkhead("int-svc", m.BulkheadConfig(max_concurrent=2, max_queue_size=2, timeout_seconds=2.0))
+        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5, jitter=False)
         retry = m.RetryWithJitter(cfg)
         counter = {"n": 0}
 
@@ -471,8 +455,9 @@ class TestIntegrationPatterns:
             def inner():
                 counter["n"] += 1
                 if counter["n"] < 3:
-                    raise IOError("transient")
+                    raise OSError("transient")
                 return "done"
+
             return bh.execute(inner)
 
         result = retry.execute(call_via_bulkhead)
@@ -482,7 +467,7 @@ class TestIntegrationPatterns:
     # Integration test B — health check drives retry: skip retries when service UNHEALTHY
     def test_health_drives_retry_decision(self, m):
         agg = m.HealthCheckAggregator()
-        agg.register("backend", lambda: False)   # backend is down
+        agg.register("backend", lambda: False)  # backend is down
         health = agg.check_all()
 
         attempt_counter = {"n": 0}
@@ -491,8 +476,7 @@ class TestIntegrationPatterns:
             attempt_counter["n"] += 1
             raise ConnectionError("backend unavailable")
 
-        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5,
-                            jitter=False)
+        cfg = m.RetryConfig(max_attempts=3, base_delay_ms=1, max_delay_ms=5, jitter=False)
         retry = m.RetryWithJitter(cfg)
 
         if not health.is_ready():

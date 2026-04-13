@@ -10,7 +10,6 @@ Four Enterprise Integration Patterns for message routing:
 
 import importlib.util
 import sys
-import threading
 import time
 import types
 from pathlib import Path
@@ -21,9 +20,7 @@ import pytest
 # Module loading
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "18_message_routing_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "18_message_routing_patterns.py"
 
 
 def _load_module():
@@ -57,7 +54,6 @@ def _msg(m, payload="test", **kwargs):
 
 
 class TestContentBasedRouter:
-
     def test_routes_to_matching_channel(self, m):
         router = m.ContentBasedRouter()
         router.add_route("orders", lambda msg: isinstance(msg.payload, dict) and msg.payload.get("type") == "order")
@@ -114,7 +110,6 @@ class TestContentBasedRouter:
 
 
 class TestMessageSplitter:
-
     def test_splits_into_correct_count(self, m):
         splitter = m.MessageSplitter(split_fn=lambda msg: list(msg.payload))
         msg = _msg(m, payload=[1, 2, 3])
@@ -164,10 +159,13 @@ class TestMessageSplitter:
 
 
 class TestMessageAggregator:
-
     def test_returns_none_when_incomplete(self, m):
-        def all_3(msgs): return len(msgs) >= 3
-        def merge(msgs): return sum(msg.payload for msg in msgs)
+        def all_3(msgs):
+            return len(msgs) >= 3
+
+        def merge(msgs):
+            return sum(msg.payload for msg in msgs)
+
         agg = m.MessageAggregator(
             completion_predicate=all_3,
             aggregation_strategy=merge,
@@ -177,8 +175,12 @@ class TestMessageAggregator:
         assert result is None
 
     def test_completes_when_predicate_met(self, m):
-        def all_3(msgs): return len(msgs) >= 3
-        def merge(msgs): return [msg.payload for msg in msgs]
+        def all_3(msgs):
+            return len(msgs) >= 3
+
+        def merge(msgs):
+            return [msg.payload for msg in msgs]
+
         agg = m.MessageAggregator(
             completion_predicate=all_3,
             aggregation_strategy=merge,
@@ -189,8 +191,12 @@ class TestMessageAggregator:
         assert result is not None
 
     def test_multiple_correlation_groups_independent(self, m):
-        def all_2(msgs): return len(msgs) >= 2
-        def merge(msgs): return [msg.payload for msg in msgs]
+        def all_2(msgs):
+            return len(msgs) >= 2
+
+        def merge(msgs):
+            return [msg.payload for msg in msgs]
+
         agg = m.MessageAggregator(completion_predicate=all_2, aggregation_strategy=merge)
 
         agg.receive(_msg(m, payload="a1", correlation_id="group-A"))
@@ -203,15 +209,23 @@ class TestMessageAggregator:
         assert "group-B" in agg.pending_groups()
 
     def test_pending_groups_returns_incomplete(self, m):
-        def all_3(msgs): return len(msgs) >= 3
-        def merge(msgs): return msgs
+        def all_3(msgs):
+            return len(msgs) >= 3
+
+        def merge(msgs):
+            return msgs
+
         agg = m.MessageAggregator(completion_predicate=all_3, aggregation_strategy=merge)
         agg.receive(_msg(m, payload=1, correlation_id="pending"))
         assert "pending" in agg.pending_groups()
 
     def test_flush_group_returns_partial_messages(self, m):
-        def all_3(msgs): return len(msgs) >= 3
-        def merge(msgs): return msgs
+        def all_3(msgs):
+            return len(msgs) >= 3
+
+        def merge(msgs):
+            return msgs
+
         agg = m.MessageAggregator(completion_predicate=all_3, aggregation_strategy=merge)
         agg.receive(_msg(m, payload=1, correlation_id="flush-me"))
         flushed = agg.flush_group("flush-me")
@@ -219,15 +233,23 @@ class TestMessageAggregator:
         assert len(flushed) == 1
 
     def test_flush_nonexistent_group_returns_none(self, m):
-        def all_2(msgs): return len(msgs) >= 2
-        def merge(msgs): return msgs
+        def all_2(msgs):
+            return len(msgs) >= 2
+
+        def merge(msgs):
+            return msgs
+
         agg = m.MessageAggregator(completion_predicate=all_2, aggregation_strategy=merge)
         result = agg.flush_group("does-not-exist")
         assert result is None
 
     def test_timeout_raises_aggregation_timeout(self, m):
-        def never_complete(msgs): return False
-        def merge(msgs): return msgs
+        def never_complete(msgs):
+            return False
+
+        def merge(msgs):
+            return msgs
+
         agg = m.MessageAggregator(
             completion_predicate=never_complete,
             aggregation_strategy=merge,
@@ -245,7 +267,6 @@ class TestMessageAggregator:
 
 
 class TestMessageFilter:
-
     def test_passes_matching_message(self, m):
         f = m.MessageFilter(predicate=lambda msg: msg.payload == "keep")
         msg = _msg(m, payload="keep")

@@ -21,9 +21,7 @@ import pytest
 # Module loading
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "17_resilience_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "17_resilience_patterns.py"
 
 
 def _load_module():
@@ -59,7 +57,6 @@ def _fast_cb(m, failure_rate=0.5, min_calls=4, window=4, wait=0.05, half_open=1)
 
 
 class TestSlidingWindowCircuitBreaker:
-
     def test_initial_state_is_closed(self, m):
         cb = _fast_cb(m)
         assert cb.state == m.CircuitBreakerState.CLOSED
@@ -163,7 +160,6 @@ class TestSlidingWindowCircuitBreaker:
 
 
 class TestBulkheadPool:
-
     def test_successful_call_within_limit(self, m):
         bh = m.BulkheadPool("svc", max_concurrent_calls=2)
         result = bh.call(lambda: "ok")
@@ -243,7 +239,6 @@ class TestBulkheadPool:
 
 
 class TestBurstAwareRateLimiter:
-
     def test_acquires_within_burst(self, m):
         limiter = m.BurstAwareRateLimiter(refill_rate=1.0, burst_capacity=5.0)
         for _ in range(5):
@@ -317,7 +312,6 @@ class TestBurstAwareRateLimiter:
 
 
 class TestJitteredRetryPolicy:
-
     def test_success_on_first_attempt(self, m):
         retry = m.JitteredRetryPolicy(m.RetryConfig(max_attempts=3, base_delay=0.001))
         result = retry.execute(lambda: "ok")
@@ -393,7 +387,7 @@ class TestJitteredRetryPolicy:
         def flaky():
             attempts[0] += 1
             if attempts[0] < 3:
-                raise IOError("transient io")
+                raise OSError("transient io")
             return "recovered"
 
         result = retry.execute_with_breaker(flaky, cb)

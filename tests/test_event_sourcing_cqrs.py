@@ -11,7 +11,6 @@ Four distributed data management patterns:
 import importlib.util
 import sys
 import threading
-import time
 import types
 import uuid
 from pathlib import Path
@@ -22,9 +21,7 @@ import pytest
 # Module loading
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "16_event_sourcing_cqrs.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "16_event_sourcing_cqrs.py"
 
 
 def _load_module():
@@ -48,7 +45,9 @@ def m():
 # ---------------------------------------------------------------------------
 
 
-def _make_event(m, aggregate_id: str, sequence: int = 1, event_type: str = "order.placed", payload: dict | None = None) -> object:
+def _make_event(
+    m, aggregate_id: str, sequence: int = 1, event_type: str = "order.placed", payload: dict | None = None
+) -> object:  # noqa: E501
     return m.DomainEvent(
         event_id=str(uuid.uuid4()),
         aggregate_id=aggregate_id,
@@ -72,7 +71,6 @@ def _place_pay_ship(m, handler, oid: str):
 
 
 class TestEventStore:
-
     def test_append_and_load_stream(self, m):
         store = m.EventStore()
         evt = _make_event(m, "ORD-1", sequence=1)
@@ -174,7 +172,6 @@ class TestEventStore:
 
 
 class TestAggregate:
-
     def test_raise_event_increments_version(self, m):
         agg = m.OrderAggregate("ORD-A")
         assert agg.version == 0
@@ -229,7 +226,6 @@ class TestAggregate:
 
 
 class TestOrderAggregateCommands:
-
     def test_place_order_sets_status_placed(self, m):
         agg = m.OrderAggregate("ORD-CMD-1")
         agg.place_order("C1", 99.0)
@@ -287,7 +283,6 @@ class TestOrderAggregateCommands:
 
 
 class TestCommandHandler:
-
     def test_execute_success_returns_true(self, m):
         store = m.EventStore()
         handler = m.CommandHandler(store, m.OrderAggregate)
@@ -349,7 +344,6 @@ class TestCommandHandler:
 
 
 class TestOrderProjection:
-
     def test_rebuild_empty_store(self, m):
         store = m.EventStore()
         proj = m.OrderProjection(store)
@@ -452,7 +446,6 @@ class TestOrderProjection:
 
 
 class TestSnapshotStore:
-
     def test_save_and_load(self, m):
         snap_store = m.SnapshotStore()
         snap = m.Snapshot(
@@ -480,13 +473,10 @@ class TestSnapshotStore:
 
 
 class TestSnapshotCommandHandler:
-
     def _setup(self, m, snapshot_every=10):
         store = m.EventStore()
         snap_store = m.SnapshotStore()
-        handler = m.SnapshotCommandHandler(
-            store, snap_store, m.OrderAggregate, snapshot_every=snapshot_every
-        )
+        handler = m.SnapshotCommandHandler(store, snap_store, m.OrderAggregate, snapshot_every=snapshot_every)
         return store, snap_store, handler
 
     def test_execute_without_snapshot_works(self, m):

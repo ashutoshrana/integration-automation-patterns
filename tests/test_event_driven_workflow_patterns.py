@@ -16,7 +16,6 @@ import sys
 import threading
 import types
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -24,11 +23,7 @@ import pytest
 # Module loader
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent
-    / "examples"
-    / "27_event_driven_workflow_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "27_event_driven_workflow_patterns.py"
 
 
 def _load_module():
@@ -109,9 +104,9 @@ class TestEventBus:
         received: list[dict] = []
         handler = received.append
         bus.subscribe("tick", handler)
-        bus.publish({"type": "tick"})   # should call
+        bus.publish({"type": "tick"})  # should call
         bus.unsubscribe("tick", handler)
-        bus.publish({"type": "tick"})   # should NOT call
+        bus.publish({"type": "tick"})  # should NOT call
         assert len(received) == 1
 
     def test_unsubscribe_nonexistent_handler_is_noop(self, m):
@@ -145,10 +140,7 @@ class TestEventBus:
 
         bus.subscribe("concurrent", safe_append)
 
-        threads = [
-            threading.Thread(target=bus.publish, args=({"type": "concurrent", "n": i},))
-            for i in range(50)
-        ]
+        threads = [threading.Thread(target=bus.publish, args=({"type": "concurrent", "n": i},)) for i in range(50)]
         for t in threads:
             t.start()
         for t in threads:
@@ -242,10 +234,10 @@ class TestEventSourcingWorkflow:
     def test_replay_up_to_seq_filters_correctly(self, m):
         """replay(up_to_seq=N) returns only events with seq <= N."""
         wf = m.EventSourcingWorkflow("wf-8")
-        wf.record_event("workflow.started", {})       # seq 0
+        wf.record_event("workflow.started", {})  # seq 0
         wf.record_event("workflow.step_completed", {"step": "a"})  # seq 1
         wf.record_event("workflow.step_completed", {"step": "b"})  # seq 2
-        wf.record_event("workflow.completed", {})     # seq 3
+        wf.record_event("workflow.completed", {})  # seq 3
         partial = wf.replay(up_to_seq=1)
         assert len(partial) == 2
         assert partial[-1]["seq"] == 1
@@ -505,7 +497,7 @@ class TestEventFilter:
         ef = m.EventFilter()
         called: list[int] = []
         ef.add_filter("fail_first", lambda e: False)
-        ef.add_filter("should_not_run", lambda e: (called.append(1) or True))
+        ef.add_filter("should_not_run", lambda e: called.append(1) or True)
         ef.process({"type": "x"})
         assert called == []
 

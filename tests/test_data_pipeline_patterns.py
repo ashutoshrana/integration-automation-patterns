@@ -12,9 +12,7 @@ from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "20_data_pipeline_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "20_data_pipeline_patterns.py"
 
 
 def _load_module():
@@ -330,10 +328,7 @@ class TestETLPipeline:
     """Tests for ETLPipeline: stage execution, checkpointing, metrics, and quality gates."""
 
     def _make_records(self, m, n, prefix="rec"):
-        return [
-            m.DataRecord(record_id=f"{prefix}-{i}", payload=f"value-{i}")
-            for i in range(n)
-        ]
+        return [m.DataRecord(record_id=f"{prefix}-{i}", payload=f"value-{i}") for i in range(n)]
 
     def test_single_stage_completes(self, m):
         """Extract 3 records, no transform, no load → stage status COMPLETED."""
@@ -367,9 +362,7 @@ class TestETLPipeline:
         """Extract 5 records → metrics.records_extracted == 5."""
         records = self._make_records(m, 5)
         pipeline = m.ETLPipeline("pipe-3")
-        pipeline.add_stage(
-            m.PipelineStage(stage_id="s1", extract_fn=lambda: records)
-        )
+        pipeline.add_stage(m.PipelineStage(stage_id="s1", extract_fn=lambda: records))
         metrics = pipeline.run(run_id="run-003")
         assert metrics.records_extracted == 5
 
@@ -378,16 +371,10 @@ class TestETLPipeline:
         loaded_records = []
 
         def extract():
-            return [
-                m.DataRecord(record_id=f"rec-{i}", payload={"val": i})
-                for i in range(3)
-            ]
+            return [m.DataRecord(record_id=f"rec-{i}", payload={"val": i}) for i in range(3)]
 
         def transform(recs):
-            return [
-                m.DataRecord(record_id=r.record_id, payload={"val": r.payload["val"] * 2})
-                for r in recs
-            ]
+            return [m.DataRecord(record_id=r.record_id, payload={"val": r.payload["val"] * 2}) for r in recs]
 
         def load(recs):
             loaded_records.extend(recs)
@@ -439,6 +426,7 @@ class TestETLPipeline:
 
     def test_quality_gate_failure_raises(self, m):
         """Stage with failing COMPLETENESS rule + threshold=1.0 → raises QualityGateError."""
+
         def extract():
             return [
                 m.DataRecord(record_id="rec-1", payload={"name": "Alice"}),

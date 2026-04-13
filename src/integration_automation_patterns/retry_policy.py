@@ -4,17 +4,20 @@ RetryPolicy — composable retry configuration for enterprise integration.
 Separates retry configuration from the caller, making policies testable,
 reusable, and injectable without subclassing.
 """
+
 from __future__ import annotations
-from dataclasses import dataclass, field
-import time
-import random
+
 import logging
+import random
+import time
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
 
 class RetryExhausted(Exception):
     """Raised when all retry attempts are exhausted."""
+
     def __init__(self, attempts: int, last_error: Exception) -> None:
         self.attempts = attempts
         self.last_error = last_error
@@ -31,9 +34,10 @@ class RetryPolicy:
         policy = RetryPolicy(max_attempts=3, base_delay=0.1, max_delay=10.0)
         result = policy.execute(my_function, arg1, arg2)
     """
+
     max_attempts: int = 3
-    base_delay: float = 1.0      # seconds
-    max_delay: float = 60.0      # seconds
+    base_delay: float = 1.0  # seconds
+    max_delay: float = 60.0  # seconds
     multiplier: float = 2.0
     jitter: bool = True
     retryable_exceptions: tuple = (Exception,)
@@ -50,7 +54,7 @@ class RetryPolicy:
 
     def delay_for(self, attempt: int) -> float:
         """Calculate sleep duration for a given attempt number (0-indexed)."""
-        delay = min(self.base_delay * (self.multiplier ** attempt), self.max_delay)
+        delay = min(self.base_delay * (self.multiplier**attempt), self.max_delay)
         if self.jitter:
             delay = random.uniform(0, delay)
         return delay
@@ -70,17 +74,20 @@ class RetryPolicy:
                     sleep_time = self.delay_for(attempt)
                     logger.debug(
                         "Attempt %d/%d failed (%s); retrying in %.3fs",
-                        attempt + 1, self.max_attempts, exc, sleep_time,
+                        attempt + 1,
+                        self.max_attempts,
+                        exc,
+                        sleep_time,
                     )
                     time.sleep(sleep_time)
         raise RetryExhausted(self.max_attempts, last_error)
 
     @classmethod
-    def no_retry(cls) -> "RetryPolicy":
+    def no_retry(cls) -> RetryPolicy:
         """Single-attempt policy — fails immediately on first error."""
         return cls(max_attempts=1, base_delay=0.0)
 
     @classmethod
-    def aggressive(cls) -> "RetryPolicy":
+    def aggressive(cls) -> RetryPolicy:
         """5 attempts, starting at 0.5s, doubling, capped at 30s."""
         return cls(max_attempts=5, base_delay=0.5, max_delay=30.0)

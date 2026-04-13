@@ -18,9 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "31_service_discovery_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "31_service_discovery_patterns.py"
 
 
 def _load_module():
@@ -44,9 +42,9 @@ def mod():
 # ---------------------------------------------------------------------------
 
 
-def _make_instance(mod, service_name="svc", instance_id="i-1",
-                   host="127.0.0.1", port=8080, weight=1,
-                   health_status="HEALTHY"):
+def _make_instance(
+    mod, service_name="svc", instance_id="i-1", host="127.0.0.1", port=8080, weight=1, health_status="HEALTHY"
+):
     """Convenience factory for ServiceInstance."""
     inst = mod.ServiceInstance(
         service_name=service_name,
@@ -65,7 +63,6 @@ def _make_instance(mod, service_name="svc", instance_id="i-1",
 
 
 class TestServiceInstance:
-
     def test_required_fields_set_correctly(self, mod):
         inst = mod.ServiceInstance("svc", "i-1", "10.0.0.1", 9000)
         assert inst.service_name == "svc"
@@ -118,7 +115,6 @@ class TestServiceInstance:
 
 
 class TestServiceRegistry:
-
     # --- register ---
 
     def test_register_single_instance(self, mod):
@@ -199,7 +195,7 @@ class TestServiceRegistry:
     def test_heartbeat_updates_last_heartbeat(self, mod):
         registry = mod.ServiceRegistry()
         inst = _make_instance(mod)
-        inst.last_heartbeat = time.monotonic() - 100.0   # old
+        inst.last_heartbeat = time.monotonic() - 100.0  # old
         registry.register(inst)
         before = inst.last_heartbeat
         registry.heartbeat("svc", "i-1")
@@ -222,7 +218,7 @@ class TestServiceRegistry:
     def test_evict_stale_marks_old_instance_unhealthy(self, mod):
         registry = mod.ServiceRegistry()
         inst = _make_instance(mod)
-        inst.last_heartbeat = time.monotonic() - 60.0   # older than 30s TTL
+        inst.last_heartbeat = time.monotonic() - 60.0  # older than 30s TTL
         registry.register(inst)
         count = registry.evict_stale(ttl_seconds=30.0)
         assert count == 1
@@ -230,7 +226,7 @@ class TestServiceRegistry:
 
     def test_evict_stale_leaves_fresh_instance_healthy(self, mod):
         registry = mod.ServiceRegistry()
-        inst = _make_instance(mod)   # last_heartbeat = now
+        inst = _make_instance(mod)  # last_heartbeat = now
         registry.register(inst)
         count = registry.evict_stale(ttl_seconds=30.0)
         assert count == 0
@@ -294,9 +290,7 @@ class TestServiceRegistry:
         def worker(start):
             try:
                 for i in range(start, start + 20):
-                    registry.register(
-                        _make_instance(mod, service_name="tsvc", instance_id=f"t-{i}")
-                    )
+                    registry.register(_make_instance(mod, service_name="tsvc", instance_id=f"t-{i}"))
             except Exception as exc:
                 errors.append(exc)
 
@@ -316,7 +310,6 @@ class TestServiceRegistry:
 
 
 class TestLoadBalancer:
-
     # --- round_robin ---
 
     def test_round_robin_cycles_in_order(self, mod):
@@ -433,7 +426,6 @@ class TestLoadBalancer:
 
 
 class TestHealthChecker:
-
     def test_zero_failure_rate_always_passes(self, mod):
         checker = mod.HealthChecker(failure_rate=0.0)
         inst = _make_instance(mod)
@@ -487,7 +479,6 @@ class TestHealthChecker:
 
 
 class TestServiceMesh:
-
     def _build_mesh(self, mod, failure_rate=0.0, strategy="round_robin"):
         registry = mod.ServiceRegistry()
         balancer = mod.LoadBalancer(strategy=strategy)

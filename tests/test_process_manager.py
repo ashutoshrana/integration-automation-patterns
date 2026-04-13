@@ -8,8 +8,8 @@ ordering, SLA timeout detection, checkpoint serialization, and crash recovery.
 
 from __future__ import annotations
 
-import sys
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -36,6 +36,7 @@ ProcessManager = _mod.ProcessManager
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _always_success(ctx):
     ctx["executed"] = ctx.get("executed", []) + ["fwd"]
@@ -77,13 +78,15 @@ def _make_step(step_id: str, *, succeed: bool = True, compensate_ok: bool = True
 # CompensatingTransactionRegistry tests
 # ---------------------------------------------------------------------------
 
+
 class TestCompensatingTransactionRegistry:
     def test_push_and_depth(self):
         reg = CompensatingTransactionRegistry()
         assert reg.depth == 0
         step = _make_step("s1")
-        reg.push(CompletedStepRecord(step=step, action_result={"id": "s1"},
-                                     completed_at=time.time(), idempotency_key="k1"))
+        reg.push(
+            CompletedStepRecord(step=step, action_result={"id": "s1"}, completed_at=time.time(), idempotency_key="k1")
+        )
         assert reg.depth == 1
 
     def test_lifo_compensation_order(self):
@@ -93,8 +96,11 @@ class TestCompensatingTransactionRegistry:
         log = []
         for i in range(3):
             step = _make_step(f"s{i}")
-            reg.push(CompletedStepRecord(step=step, action_result={"id": f"s{i}"},
-                                         completed_at=time.time(), idempotency_key=f"k{i}"))
+            reg.push(
+                CompletedStepRecord(
+                    step=step, action_result={"id": f"s{i}"}, completed_at=time.time(), idempotency_key=f"k{i}"
+                )
+            )
         reg.compensate_all(ctx, log)
         # LIFO: s2 compensated first, then s1, then s0
         assert ctx["order"] == ["comp_s2", "comp_s1", "comp_s0"]
@@ -102,16 +108,14 @@ class TestCompensatingTransactionRegistry:
     def test_compensate_all_returns_true_on_success(self):
         reg = CompensatingTransactionRegistry()
         step = _make_step("s1", compensate_ok=True)
-        reg.push(CompletedStepRecord(step=step, action_result={},
-                                     completed_at=time.time(), idempotency_key="k1"))
+        reg.push(CompletedStepRecord(step=step, action_result={}, completed_at=time.time(), idempotency_key="k1"))
         ok = reg.compensate_all({}, [])
         assert ok is True
 
     def test_compensate_all_returns_false_on_failure(self):
         reg = CompensatingTransactionRegistry()
         step = _make_step("s1", compensate_ok=False)
-        reg.push(CompletedStepRecord(step=step, action_result={},
-                                     completed_at=time.time(), idempotency_key="k1"))
+        reg.push(CompletedStepRecord(step=step, action_result={}, completed_at=time.time(), idempotency_key="k1"))
         ok = reg.compensate_all({}, [])
         assert ok is False
 
@@ -119,8 +123,9 @@ class TestCompensatingTransactionRegistry:
         reg = CompensatingTransactionRegistry()
         for i in range(3):
             step = _make_step(f"s{i}")
-            reg.push(CompletedStepRecord(step=step, action_result={},
-                                         completed_at=time.time(), idempotency_key=f"k{i}"))
+            reg.push(
+                CompletedStepRecord(step=step, action_result={}, completed_at=time.time(), idempotency_key=f"k{i}")
+            )
         reg.compensate_all({}, [])
         assert reg.depth == 0
 
@@ -128,8 +133,11 @@ class TestCompensatingTransactionRegistry:
         reg = CompensatingTransactionRegistry()
         for i in range(3):
             step = _make_step(f"s{i}")
-            reg.push(CompletedStepRecord(step=step, action_result={"id": f"s{i}"},
-                                         completed_at=time.time(), idempotency_key=f"k{i}"))
+            reg.push(
+                CompletedStepRecord(
+                    step=step, action_result={"id": f"s{i}"}, completed_at=time.time(), idempotency_key=f"k{i}"
+                )
+            )
         snapshot = reg.to_list()
         assert [s["step_id"] for s in snapshot] == ["s0", "s1", "s2"]
 
@@ -142,6 +150,7 @@ class TestCompensatingTransactionRegistry:
 # ProcessCheckpoint tests
 # ---------------------------------------------------------------------------
 
+
 class TestProcessCheckpoint:
     def test_serialize_roundtrip(self):
         cp = ProcessCheckpoint(
@@ -151,8 +160,9 @@ class TestProcessCheckpoint:
             context={"order_id": "ORD-1"},
             next_step_index=2,
             completed_step_ids=["s0", "s1"],
-            registry_snapshot=[{"step_id": "s0", "action_result": {}, "step_name": "S0",
-                                  "completed_at": 1.0, "idempotency_key": "k0"}],
+            registry_snapshot=[
+                {"step_id": "s0", "action_result": {}, "step_name": "S0", "completed_at": 1.0, "idempotency_key": "k0"}
+            ],
             checkpoint_seq=2,
         )
         data = cp.serialize()
@@ -165,20 +175,34 @@ class TestProcessCheckpoint:
 
     def test_serialize_includes_all_required_keys(self):
         cp = ProcessCheckpoint(
-            process_id="p", process_type="t", state=ProcessState.RUNNING,
-            context={}, next_step_index=0, completed_step_ids=[],
-            registry_snapshot=[], checkpoint_seq=0,
+            process_id="p",
+            process_type="t",
+            state=ProcessState.RUNNING,
+            context={},
+            next_step_index=0,
+            completed_step_ids=[],
+            registry_snapshot=[],
+            checkpoint_seq=0,
         )
         data = cp.serialize()
-        for key in ("process_id", "process_type", "state", "context",
-                    "next_step_index", "completed_step_ids", "registry_snapshot",
-                    "checkpoint_at", "checkpoint_seq"):
+        for key in (
+            "process_id",
+            "process_type",
+            "state",
+            "context",
+            "next_step_index",
+            "completed_step_ids",
+            "registry_snapshot",
+            "checkpoint_at",
+            "checkpoint_seq",
+        ):
             assert key in data
 
 
 # ---------------------------------------------------------------------------
 # ProcessManager tests
 # ---------------------------------------------------------------------------
+
 
 class TestProcessManagerHappyPath:
     def test_all_steps_succeed(self):
@@ -295,9 +319,9 @@ class TestProcessManagerTimeout:
             return True, {}
 
         s0 = _make_step("s0")
-        slow = ProcessStep("slow", "Slow", slow_action,
-                           lambda c, r: c["order"].append("comp_slow") or True,
-                           timeout_seconds=0.001)
+        slow = ProcessStep(
+            "slow", "Slow", slow_action, lambda c, r: c["order"].append("comp_slow") or True, timeout_seconds=0.001
+        )
         manager = ProcessManager("test", [s0, slow])
         audit = manager.execute(ctx)
         # s0 should have been compensated (LIFO)
@@ -307,7 +331,8 @@ class TestProcessManagerTimeout:
 
     def test_normal_step_within_sla_does_not_timeout(self):
         step = ProcessStep(
-            "s0", "Fast Step",
+            "s0",
+            "Fast Step",
             lambda ctx: (True, {}),
             lambda ctx, r: True,
             timeout_seconds=10.0,  # generous SLA
@@ -347,8 +372,20 @@ class TestProcessManagerCrashRecovery:
             next_step_index=2,
             completed_step_ids=["s0", "s1"],
             registry_snapshot=[
-                {"step_id": "s0", "step_name": "s0", "action_result": {}, "completed_at": time.time(), "idempotency_key": "k0"},
-                {"step_id": "s1", "step_name": "s1", "action_result": {}, "completed_at": time.time(), "idempotency_key": "k1"},
+                {
+                    "step_id": "s0",
+                    "step_name": "s0",
+                    "action_result": {},
+                    "completed_at": time.time(),
+                    "idempotency_key": "k0",
+                },  # noqa: E501
+                {
+                    "step_id": "s1",
+                    "step_name": "s1",
+                    "action_result": {},
+                    "completed_at": time.time(),
+                    "idempotency_key": "k1",
+                },  # noqa: E501
             ],
             checkpoint_seq=2,
         )
@@ -382,11 +419,16 @@ class TestProcessManagerCrashRecovery:
             process_type="test",
             state=ProcessState.RUNNING,
             context=dict(ctx),
-            next_step_index=1,   # Resume at s1
+            next_step_index=1,  # Resume at s1
             completed_step_ids=["s0"],
             registry_snapshot=[
-                {"step_id": "s0", "step_name": "S0", "action_result": {},
-                 "completed_at": time.time(), "idempotency_key": "k0"},
+                {
+                    "step_id": "s0",
+                    "step_name": "S0",
+                    "action_result": {},
+                    "completed_at": time.time(),
+                    "idempotency_key": "k0",
+                },
             ],
             checkpoint_seq=1,
         )

@@ -9,10 +9,10 @@ Baggage, and full multi-service integration.
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import time
 import types
-import os
 
 import pytest
 
@@ -21,9 +21,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _name = "distributed_tracing_patterns_24"
-_path = os.path.join(
-    os.path.dirname(__file__), "..", "examples", "24_distributed_tracing_patterns.py"
-)
+_path = os.path.join(os.path.dirname(__file__), "..", "examples", "24_distributed_tracing_patterns.py")
 
 
 def _load():
@@ -76,7 +74,7 @@ class TestTraceContext:
             parent_id="b" * 16,
             trace_flags=0x01,
         )
-        assert ctx.to_traceparent() == f"00-{'a'*32}-{'b'*16}-01"
+        assert ctx.to_traceparent() == f"00-{'a' * 32}-{'b' * 16}-01"
 
     # 6 — from_traceparent roundtrip
     def test_from_traceparent_roundtrip(self, m):
@@ -111,6 +109,7 @@ class TestTraceContext:
 class TestSpan:
     def _make_span(self, m) -> object:
         from datetime import datetime, timezone
+
         ctx = m.TraceContext.new_root()
         return m.Span(
             span_id="c" * 16,
@@ -173,8 +172,7 @@ class TestSpan:
         span = self._make_span(m)
         span.finish()
         d = span.to_dict()
-        for field in ("traceId", "spanId", "name", "serviceName",
-                      "startTimeUnixNano", "status"):
+        for field in ("traceId", "spanId", "name", "serviceName", "startTimeUnixNano", "status"):
             assert field in d, f"Missing field: {field}"
 
     # 18 — to_dict traceId matches trace_context.trace_id
@@ -263,6 +261,7 @@ class TestSampler:
     def test_ratio_sampler_zero_never_samples(self, m):
         s = m.RatioSampler(0.0)
         import secrets as _s
+
         for _ in range(20):
             assert s.should_sample(_s.token_hex(16)) is False
 
@@ -270,6 +269,7 @@ class TestSampler:
     def test_ratio_sampler_one_always_samples(self, m):
         s = m.RatioSampler(1.0)
         import secrets as _s
+
         for _ in range(20):
             assert s.should_sample(_s.token_hex(16)) is True
 
@@ -284,6 +284,7 @@ class TestSampler:
     # 31 — RatioSampler produces ~correct ratio over many samples
     def test_ratio_sampler_approximate_ratio(self, m):
         import secrets as _s
+
         s = m.RatioSampler(0.5)
         sampled = sum(1 for _ in range(1000) if s.should_sample(_s.token_hex(16)))
         # Allow 15% tolerance on a 50% rate over 1000 trials
@@ -333,6 +334,7 @@ class TestTracerProvider:
 class TestInMemorySpanExporter:
     def _make_finished_span(self, m):
         from datetime import datetime, timezone
+
         ctx = m.TraceContext.new_root()
         span = m.Span(
             span_id="d" * 16,

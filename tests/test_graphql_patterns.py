@@ -19,9 +19,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _name = "graphql_patterns_26"
-_path = os.path.join(
-    os.path.dirname(__file__), "..", "examples", "26_graphql_patterns.py"
-)
+_path = os.path.join(os.path.dirname(__file__), "..", "examples", "26_graphql_patterns.py")
 
 
 def _load():
@@ -80,7 +78,6 @@ def _post_type(m):
 
 
 class TestGraphQLSchema:
-
     # 1 — register_type and get_type round-trip
     def test_register_and_get_type(self, m):
         schema = m.GraphQLSchema()
@@ -157,7 +154,6 @@ class TestGraphQLSchema:
 
 
 class TestResolverRegistry:
-
     # 9 — register decorator and resolve call return resolver result
     def test_register_and_resolve(self, m):
         registry = m.ResolverRegistry()
@@ -182,10 +178,12 @@ class TestResolverRegistry:
         registry = m.ResolverRegistry()
 
         @registry.register("Query", "users")
-        def r1(parent, args, ctx): return []
+        def r1(parent, args, ctx):
+            return []
 
         @registry.register("User", "name")
-        def r2(parent, args, ctx): return "Alice"
+        def r2(parent, args, ctx):
+            return "Alice"
 
         pairs = registry.list_resolvers()
         assert ("Query", "users") in pairs
@@ -196,7 +194,8 @@ class TestResolverRegistry:
         registry = m.ResolverRegistry()
 
         @registry.register("Mutation", "createUser")
-        def r(parent, args, ctx): return {}
+        def r(parent, args, ctx):
+            return {}
 
         assert registry.has_resolver("Mutation", "createUser") is True
 
@@ -255,7 +254,6 @@ class TestResolverRegistry:
 
 
 class TestDataLoader:
-
     # 17 — load and dispatch, then get returns value
     def test_load_dispatch_get(self, m):
         loader = m.DataLoader(batch_fn=lambda keys: {k: k * 2 for k in keys})
@@ -348,7 +346,6 @@ class TestDataLoader:
 
 
 class TestCursorPagination:
-
     # 25 — encode/decode cursor round-trip
     def test_encode_decode_roundtrip(self, m):
         pager = m.CursorPagination()
@@ -436,7 +433,6 @@ class TestCursorPagination:
 
 
 class TestFieldAuthorizationPolicy:
-
     # 35 — no policy registered → access granted
     def test_no_policy_allows_access(self, m):
         policy = m.FieldAuthorizationPolicy()
@@ -461,12 +457,12 @@ class TestFieldAuthorizationPolicy:
     def test_any_required_role_grants_access(self, m):
         policy = m.FieldAuthorizationPolicy()
         policy.require_roles("User", "email", {"admin", "self", "support"})
-        ctx_admin   = _make_context(m, roles=("admin",))
+        ctx_admin = _make_context(m, roles=("admin",))
         ctx_support = _make_context(m, roles=("support",))
-        ctx_anon    = _make_context(m, roles=())
-        assert policy.check("User", "email", ctx_admin)   is True
+        ctx_anon = _make_context(m, roles=())
+        assert policy.check("User", "email", ctx_admin) is True
         assert policy.check("User", "email", ctx_support) is True
-        assert policy.check("User", "email", ctx_anon)    is False
+        assert policy.check("User", "email", ctx_anon) is False
 
     # 39 — get_required_roles returns registered set
     def test_get_required_roles(self, m):
@@ -487,7 +483,6 @@ class TestFieldAuthorizationPolicy:
 
 
 class TestSubscriptionManager:
-
     # 41 — subscribe and publish delivers payload to subscriber
     def test_subscribe_and_publish(self, m):
         manager = m.SubscriptionManager()
@@ -520,7 +515,7 @@ class TestSubscriptionManager:
         manager = m.SubscriptionManager()
         assert manager.subscriber_count("NEW_EVENT") == 0
         manager.subscribe("NEW_EVENT", "alpha", lambda p: None)
-        manager.subscribe("NEW_EVENT", "beta",  lambda p: None)
+        manager.subscribe("NEW_EVENT", "beta", lambda p: None)
         assert manager.subscriber_count("NEW_EVENT") == 2
 
     # 45 — unsubscribe with no event_type removes subscriber from all events

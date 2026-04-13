@@ -15,9 +15,7 @@ from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "22_event_sourcing_cqrs_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "22_event_sourcing_cqrs_patterns.py"
 
 
 def _load_module():
@@ -41,8 +39,7 @@ def m():
 # ---------------------------------------------------------------------------
 
 
-def _open_account(m, account_id="acct-001", owner="Alice",
-                  initial=Decimal("500.00")):
+def _open_account(m, account_id="acct-001", owner="Alice", initial=Decimal("500.00")):
     """Return a freshly opened BankAccount aggregate."""
     acct = m.BankAccount(account_id)
     acct.open(owner, initial)
@@ -267,10 +264,8 @@ class TestSnapshotStore:
     def test_save_overwrites_previous_snapshot(self, m):
         """A second save() for the same aggregate_id should replace the first."""
         store = m.SnapshotStore()
-        snap1 = m.Snapshot("snap-002", 10, {"balance": "100.00", "owner_name": "A",
-                                             "is_open": True}, time.time())
-        snap2 = m.Snapshot("snap-002", 20, {"balance": "200.00", "owner_name": "A",
-                                             "is_open": True}, time.time())
+        snap1 = m.Snapshot("snap-002", 10, {"balance": "100.00", "owner_name": "A", "is_open": True}, time.time())
+        snap2 = m.Snapshot("snap-002", 20, {"balance": "200.00", "owner_name": "A", "is_open": True}, time.time())
         store.save(snap1)
         store.save(snap2)
         loaded = store.load("snap-002")
@@ -399,8 +394,7 @@ class TestEventSourcedRepository:
     def test_save_then_load_is_identity_for_bank_account_state(self, m):
         """Round-tripping save → load should preserve all relevant state fields."""
         _, _, repo = _make_repo(m)
-        acct = _open_account(m, account_id="repo-004",
-                              owner="Eve", initial=Decimal("750.00"))
+        acct = _open_account(m, account_id="repo-004", owner="Eve", initial=Decimal("750.00"))
         acct.deposit(Decimal("250.00"))
         acct.withdraw(Decimal("100.00"))
         repo.save(acct)

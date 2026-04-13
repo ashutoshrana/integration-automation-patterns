@@ -21,9 +21,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _name = "schema_registry_patterns_25"
-_path = os.path.join(
-    os.path.dirname(__file__), "..", "examples", "25_schema_registry_patterns.py"
-)
+_path = os.path.join(os.path.dirname(__file__), "..", "examples", "25_schema_registry_patterns.py")
 
 
 def _load():
@@ -45,13 +43,16 @@ def m():
 # Helpers for building schema strings
 # ---------------------------------------------------------------------------
 
+
 def _make_schema(*fields) -> str:
     """Build an Avro record schema JSON string from field dicts."""
-    return json.dumps({
-        "type": "record",
-        "name": "TestRecord",
-        "fields": list(fields),
-    })
+    return json.dumps(
+        {
+            "type": "record",
+            "name": "TestRecord",
+            "fields": list(fields),
+        }
+    )
 
 
 _SCHEMA_ID_EMAIL = _make_schema(
@@ -78,7 +79,6 @@ _SCHEMA_REQUIRED_NEW_FIELD = _make_schema(
 
 
 class TestInMemorySchemaRegistry:
-
     # 1 — register returns an integer schema_id
     def test_register_returns_int(self, m):
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.NONE)
@@ -150,7 +150,6 @@ class TestInMemorySchemaRegistry:
 
 
 class TestCompatibilityChecks:
-
     # 9 — first registration for a new subject always succeeds
     def test_first_registration_always_succeeds(self, m):
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.BACKWARD)
@@ -190,11 +189,13 @@ class TestCompatibilityChecks:
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.NONE)
         registry.register("nc", _SCHEMA_ID_EMAIL)
         # Any schema should register regardless of compatibility
-        totally_different = json.dumps({
-            "type": "record",
-            "name": "Other",
-            "fields": [{"name": "x", "type": "string"}],
-        })
+        totally_different = json.dumps(
+            {
+                "type": "record",
+                "name": "Other",
+                "fields": [{"name": "x", "type": "string"}],
+            }
+        )
         sid2 = registry.register("nc", totally_different)
         assert sid2 >= 1
 
@@ -205,7 +206,6 @@ class TestCompatibilityChecks:
 
 
 class TestAvroSchemaEvolution:
-
     # 14 — parse_fields returns a dict keyed by field name
     def test_parse_fields_keys(self, m):
         fields = m.AvroSchemaEvolution.parse_fields(_SCHEMA_ID_EMAIL)
@@ -219,36 +219,26 @@ class TestAvroSchemaEvolution:
 
     # 16 — backward compatible: adding field with default
     def test_backward_compat_add_field_with_default(self, m):
-        assert m.AvroSchemaEvolution.is_backward_compatible(
-            _SCHEMA_WITH_DEFAULT, _SCHEMA_ID_EMAIL
-        ) is True
+        assert m.AvroSchemaEvolution.is_backward_compatible(_SCHEMA_WITH_DEFAULT, _SCHEMA_ID_EMAIL) is True
 
     # 17 — backward compatible: removing a field is OK
     def test_backward_compat_remove_field(self, m):
         schema_no_email = _make_schema({"name": "id", "type": "int"})
-        assert m.AvroSchemaEvolution.is_backward_compatible(
-            schema_no_email, _SCHEMA_ID_EMAIL
-        ) is True
+        assert m.AvroSchemaEvolution.is_backward_compatible(schema_no_email, _SCHEMA_ID_EMAIL) is True
 
     # 18 — NOT backward compatible: adding required field (no default)
     def test_backward_not_compat_required_new_field(self, m):
-        assert m.AvroSchemaEvolution.is_backward_compatible(
-            _SCHEMA_REQUIRED_NEW_FIELD, _SCHEMA_ID_EMAIL
-        ) is False
+        assert m.AvroSchemaEvolution.is_backward_compatible(_SCHEMA_REQUIRED_NEW_FIELD, _SCHEMA_ID_EMAIL) is False
 
     # 19 — forward compatible: new writer adds field, old reader ignores it
     def test_forward_compat_new_field_no_default(self, m):
         # writer (_SCHEMA_REQUIRED_NEW_FIELD) has extra required field;
         # old reader (_SCHEMA_ID_EMAIL) ignores it → forward compatible
-        assert m.AvroSchemaEvolution.is_forward_compatible(
-            _SCHEMA_REQUIRED_NEW_FIELD, _SCHEMA_ID_EMAIL
-        ) is True
+        assert m.AvroSchemaEvolution.is_forward_compatible(_SCHEMA_REQUIRED_NEW_FIELD, _SCHEMA_ID_EMAIL) is True
 
     # 20 — full compatible: adding field with default is both backward and forward
     def test_full_compat_add_field_with_default(self, m):
-        assert m.AvroSchemaEvolution.is_full_compatible(
-            _SCHEMA_WITH_DEFAULT, _SCHEMA_ID_EMAIL
-        ) is True
+        assert m.AvroSchemaEvolution.is_full_compatible(_SCHEMA_WITH_DEFAULT, _SCHEMA_ID_EMAIL) is True
 
 
 # ===========================================================================
@@ -257,7 +247,6 @@ class TestAvroSchemaEvolution:
 
 
 class TestConfluentFramingCodec:
-
     # 21 — encode produces bytes starting with magic byte 0x00
     def test_encode_starts_with_magic(self, m):
         encoded = m.ConfluentFramingCodec.encode(7, b"hello")
@@ -301,7 +290,6 @@ class TestConfluentFramingCodec:
 
 
 class TestJsonSchemaSerializer:
-
     def _setup(self, m):
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.NONE)
         registry.register("ser-test", _SCHEMA_ID_EMAIL)
@@ -343,7 +331,6 @@ class TestJsonSchemaSerializer:
 
 
 class TestSchemaEvolutionMigrator:
-
     def _setup(self, m):
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.NONE)
         id_v1 = registry.register("mig", _SCHEMA_ID_EMAIL)
@@ -404,7 +391,6 @@ class TestSchemaEvolutionMigrator:
 
 
 class TestIntegration:
-
     # 36 — full workflow: register v1 → v2, check compat, serialize, deserialize
     def test_full_schema_lifecycle(self, m):
         registry = m.InMemorySchemaRegistry(m.CompatibilityLevel.BACKWARD)

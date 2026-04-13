@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +19,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _MODULE_NAME = "event_streaming_windows"
-_MODULE_PATH = (
-    Path(__file__).parent.parent / "examples" / "12_event_streaming_windows.py"
-)
+_MODULE_PATH = Path(__file__).parent.parent / "examples" / "12_event_streaming_windows.py"
 
 
 def _load_module() -> Any:
@@ -56,6 +53,7 @@ _make_event = _mod._make_event
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _event(stream_key: str, event_time_ms: int, **payload: Any) -> StreamEvent:
     return _make_event(stream_key, event_time_ms, payload if payload else None)
 
@@ -64,8 +62,8 @@ def _event(stream_key: str, event_time_ms: int, **payload: Any) -> StreamEvent:
 # TumblingWindow
 # ---------------------------------------------------------------------------
 
-class TestTumblingWindow:
 
+class TestTumblingWindow:
     def test_assigns_event_at_window_boundary(self) -> None:
         tw = TumblingWindow(window_size_ms=60_000)
         start, end = tw.assign(0)
@@ -112,8 +110,8 @@ class TestTumblingWindow:
 # SlidingWindow
 # ---------------------------------------------------------------------------
 
-class TestSlidingWindow:
 
+class TestSlidingWindow:
     def test_event_belongs_to_multiple_windows(self) -> None:
         sw = SlidingWindow(window_size_ms=60_000, slide_interval_ms=15_000)
         windows = sw.assign_all(30_000)
@@ -136,7 +134,7 @@ class TestSlidingWindow:
     def test_slide_equals_window_size_is_tumbling(self) -> None:
         sw = SlidingWindow(window_size_ms=60_000, slide_interval_ms=60_000)
         windows = sw.assign_all(30_000)
-        assert len(windows) == 1   # no overlap when slide == window
+        assert len(windows) == 1  # no overlap when slide == window
 
     def test_all_windows_have_correct_size(self) -> None:
         sw = SlidingWindow(window_size_ms=60_000, slide_interval_ms=15_000)
@@ -160,8 +158,8 @@ class TestSlidingWindow:
 # SessionWindow
 # ---------------------------------------------------------------------------
 
-class TestSessionWindow:
 
+class TestSessionWindow:
     def test_single_event_creates_session(self) -> None:
         sw = SessionWindow(session_gap_ms=30_000)
         e = _event("user-1", 0)
@@ -207,8 +205,8 @@ class TestSessionWindow:
         assert "user-A" in open_sessions
         assert "user-B" in open_sessions
         # Sessions are independent — no cross-contamination
-        assert open_sessions["user-A"][0] == 0    # user-A session starts at 0
-        assert open_sessions["user-B"][0] == 5_000   # user-B session starts at 5s
+        assert open_sessions["user-A"][0] == 0  # user-A session starts at 0
+        assert open_sessions["user-B"][0] == 5_000  # user-B session starts at 5s
 
     def test_invalid_session_gap_raises(self) -> None:
         with pytest.raises(ValueError):
@@ -219,8 +217,8 @@ class TestSessionWindow:
 # WindowAggregator
 # ---------------------------------------------------------------------------
 
-class TestWindowAggregator:
 
+class TestWindowAggregator:
     def _events(self, amounts: list[float]) -> list[StreamEvent]:
         return [_event("k", i * 1000, amount=a) for i, a in enumerate(amounts)]
 
@@ -240,10 +238,12 @@ class TestWindowAggregator:
         assert result["AVG(amount)"] == 20.0
 
     def test_min_max(self) -> None:
-        agg = WindowAggregator([
-            (AggregationFunction.MIN, "amount"),
-            (AggregationFunction.MAX, "amount"),
-        ])
+        agg = WindowAggregator(
+            [
+                (AggregationFunction.MIN, "amount"),
+                (AggregationFunction.MAX, "amount"),
+            ]
+        )
         result = agg.compute(self._events([5, 15, 10]))
         assert result["MIN(amount)"] == 5
         assert result["MAX(amount)"] == 15
@@ -273,8 +273,8 @@ class TestWindowAggregator:
 # LateArrivalHandler
 # ---------------------------------------------------------------------------
 
-class TestLateArrivalHandler:
 
+class TestLateArrivalHandler:
     def test_within_tolerance_always_accepted(self) -> None:
         handler = LateArrivalHandler(late_tolerance_ms=10_000, policy=LateArrivalPolicy.DROP)
         late_event = _event("k", 90_000)
@@ -289,9 +289,7 @@ class TestLateArrivalHandler:
         assert handler.audit_log[0].policy_applied == LateArrivalPolicy.DROP
 
     def test_side_output_routes_to_reconciliation_stream(self) -> None:
-        handler = LateArrivalHandler(
-            late_tolerance_ms=10_000, policy=LateArrivalPolicy.SIDE_OUTPUT
-        )
+        handler = LateArrivalHandler(late_tolerance_ms=10_000, policy=LateArrivalPolicy.SIDE_OUTPUT)
         late_event = _event("k", 60_000)
         should_process, _ = handler.handle(late_event, watermark_ms=100_000)
         assert not should_process
@@ -313,9 +311,7 @@ class TestLateArrivalHandler:
         assert handler.audit_log[0].lateness_ms == 50_000
 
     def test_assign_to_latest_policy(self) -> None:
-        handler = LateArrivalHandler(
-            late_tolerance_ms=5_000, policy=LateArrivalPolicy.ASSIGN_TO_LATEST
-        )
+        handler = LateArrivalHandler(late_tolerance_ms=5_000, policy=LateArrivalPolicy.ASSIGN_TO_LATEST)
         late_event = _event("k", 30_000)
         latest_key = WindowKey("k", 100_000, 160_000)
         should_process, assigned = handler.handle(late_event, watermark_ms=100_000, latest_open_window=latest_key)
@@ -327,8 +323,8 @@ class TestLateArrivalHandler:
 # StreamProcessor — tumbling
 # ---------------------------------------------------------------------------
 
-class TestStreamProcessorTumbling:
 
+class TestStreamProcessorTumbling:
     def _spec(self) -> WindowSpec:
         return WindowSpec(
             window_size_ms=60_000,
@@ -385,8 +381,8 @@ class TestStreamProcessorTumbling:
 # StreamProcessor — sliding
 # ---------------------------------------------------------------------------
 
-class TestStreamProcessorSliding:
 
+class TestStreamProcessorSliding:
     def test_burst_appears_in_multiple_windows(self) -> None:
         spec = WindowSpec(
             window_size_ms=60_000,
@@ -408,8 +404,8 @@ class TestStreamProcessorSliding:
 # StreamProcessor — session
 # ---------------------------------------------------------------------------
 
-class TestStreamProcessorSession:
 
+class TestStreamProcessorSession:
     def _spec(self, gap_ms: int = 30_000) -> WindowSpec:
         return WindowSpec(
             window_size_ms=gap_ms,

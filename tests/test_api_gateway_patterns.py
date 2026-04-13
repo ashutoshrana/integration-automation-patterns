@@ -13,9 +13,7 @@ from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "21_api_gateway_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "21_api_gateway_patterns.py"
 
 
 def _load_module():
@@ -39,8 +37,7 @@ def m():
 # ---------------------------------------------------------------------------
 
 
-def _make_request(m, client_id="client-1", method="GET", path="/api/users",
-                  version="v1", headers=None, body=None):
+def _make_request(m, client_id="client-1", method="GET", path="/api/users", version="v1", headers=None, body=None):
     return m.APIRequest(
         client_id=client_id,
         method=method,
@@ -52,8 +49,7 @@ def _make_request(m, client_id="client-1", method="GET", path="/api/users",
     )
 
 
-def _make_response(m, status_code=200, headers=None, body=None,
-                   latency_ms=10.0, backend_calls=1):
+def _make_response(m, status_code=200, headers=None, body=None, latency_ms=10.0, backend_calls=1):
     return m.APIResponse(
         status_code=status_code,
         headers=headers or {},
@@ -61,7 +57,6 @@ def _make_response(m, status_code=200, headers=None, body=None,
         latency_ms=latency_ms,
         backend_calls=backend_calls,
     )
-
 
 
 # ===========================================================================
@@ -181,8 +176,7 @@ class TestRequestTransformer:
         rt = m.RequestTransformer()
         rt.add_header_rule("X-Injected", "yes")
         rt.add_body_mapping("oldKey", "newKey")
-        req = _make_request(m, headers={"Content-Type": "application/json"},
-                            body={"oldKey": "value"})
+        req = _make_request(m, headers={"Content-Type": "application/json"}, body={"oldKey": "value"})
         rt.transform(req)
         assert "X-Injected" not in req.headers
         assert "oldKey" in req.body
@@ -227,8 +221,7 @@ class TestResponseTransformer:
         rt = m.ResponseTransformer()
         rt.add_status_mapping(500, 200)
         rt.add_body_mask("token")
-        resp = _make_response(m, status_code=500,
-                               body={"token": "abc", "data": "value"})
+        resp = _make_response(m, status_code=500, body={"token": "abc", "data": "value"})
         rt.transform(resp)
         assert resp.status_code == 500
         assert resp.body["token"] == "abc"
@@ -238,9 +231,7 @@ class TestResponseTransformer:
         rt = m.ResponseTransformer()
         rt.add_body_mask("ssn")
         rt.add_body_mask("credit_card")
-        resp = _make_response(m, body={"ssn": "123-45-6789",
-                                        "credit_card": "4111-1111",
-                                        "name": "Alice"})
+        resp = _make_response(m, body={"ssn": "123-45-6789", "credit_card": "4111-1111", "name": "Alice"})
         new_resp = rt.transform(resp)
         assert new_resp.body["ssn"] == "***"
         assert new_resp.body["credit_card"] == "***"
@@ -320,8 +311,7 @@ class TestAPIVersionRouter:
 
     def test_handler_return_value_passed_through_unchanged(self, m):
         """The exact response returned by the handler should reach the caller."""
-        expected = _make_response(m, status_code=201, body={"created": True},
-                                   latency_ms=42.0)
+        expected = _make_response(m, status_code=201, body={"created": True}, latency_ms=42.0)
         router = m.APIVersionRouter()
         router.register("v1", lambda req: expected)
         req = _make_request(m, version="v1")
@@ -340,10 +330,8 @@ class TestAPIComposer:
     def test_compose_merges_responses_from_two_backends(self, m):
         """compose() with two backends should return a single merged response."""
         composer = m.APIComposer()
-        composer.add_backend("users", lambda req: _make_response(
-            m, body={"name": "Alice"}, latency_ms=10.0))
-        composer.add_backend("orders", lambda req: _make_response(
-            m, body={"count": 5}, latency_ms=20.0))
+        composer.add_backend("users", lambda req: _make_response(m, body={"name": "Alice"}, latency_ms=10.0))
+        composer.add_backend("orders", lambda req: _make_response(m, body={"count": 5}, latency_ms=20.0))
         req = _make_request(m)
         result = composer.compose(req)
         assert result is not None
@@ -352,10 +340,8 @@ class TestAPIComposer:
     def test_compose_body_contains_keys_from_both_backends(self, m):
         """Merged body should contain prefixed keys from each backend."""
         composer = m.APIComposer()
-        composer.add_backend("alpha", lambda req: _make_response(
-            m, body={"x": 1}))
-        composer.add_backend("beta", lambda req: _make_response(
-            m, body={"y": 2}))
+        composer.add_backend("alpha", lambda req: _make_response(m, body={"x": 1}))
+        composer.add_backend("beta", lambda req: _make_response(m, body={"y": 2}))
         req = _make_request(m)
         result = composer.compose(req)
         assert "alpha.x" in result.body
@@ -364,10 +350,8 @@ class TestAPIComposer:
     def test_compose_backend_calls_equals_number_of_backends(self, m):
         """backend_calls in merged response should reflect the number of backends."""
         composer = m.APIComposer()
-        composer.add_backend("svc1", lambda req: _make_response(
-            m, backend_calls=1))
-        composer.add_backend("svc2", lambda req: _make_response(
-            m, backend_calls=1))
+        composer.add_backend("svc1", lambda req: _make_response(m, backend_calls=1))
+        composer.add_backend("svc2", lambda req: _make_response(m, backend_calls=1))
         req = _make_request(m)
         result = composer.compose(req)
         assert result.backend_calls == 2
@@ -375,10 +359,8 @@ class TestAPIComposer:
     def test_compose_parallel_returns_merged_result(self, m):
         """compose_parallel() should return a merged response with body keys from all backends."""
         composer = m.APIComposer()
-        composer.add_backend("p1", lambda req: _make_response(
-            m, body={"a": 10}))
-        composer.add_backend("p2", lambda req: _make_response(
-            m, body={"b": 20}))
+        composer.add_backend("p1", lambda req: _make_response(m, body={"a": 10}))
+        composer.add_backend("p2", lambda req: _make_response(m, body={"b": 20}))
         req = _make_request(m)
         result = composer.compose_parallel(req)
         assert "p1.a" in result.body
@@ -395,17 +377,14 @@ class TestAPIComposer:
 
     def test_compose_parallel_same_shape_as_sequential(self, m):
         """compose_parallel() body keys should match those from compose() for the same backends."""
+
         def make_composer():
             c = m.APIComposer()
-            c.add_backend("svc_a", lambda req: _make_response(
-                m, body={"val": 99}))
-            c.add_backend("svc_b", lambda req: _make_response(
-                m, body={"flag": True}))
+            c.add_backend("svc_a", lambda req: _make_response(m, body={"val": 99}))
+            c.add_backend("svc_b", lambda req: _make_response(m, body={"flag": True}))
             return c
 
         req = _make_request(m)
         seq_result = make_composer().compose(req)
         par_result = make_composer().compose_parallel(req)
         assert set(seq_result.body.keys()) == set(par_result.body.keys())
-
-

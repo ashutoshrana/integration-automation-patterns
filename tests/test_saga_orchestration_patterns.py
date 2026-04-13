@@ -22,9 +22,7 @@ import pytest
 # Module loading
 # ---------------------------------------------------------------------------
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "15_saga_orchestration_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "15_saga_orchestration_patterns.py"
 
 
 def _load_module():
@@ -46,6 +44,7 @@ def m():
 # ---------------------------------------------------------------------------
 # Pattern 1 — Orchestration-Based Saga
 # ---------------------------------------------------------------------------
+
 
 class TestSagaOrchestrator:
     def test_all_steps_succeed_returns_completed(self, m):
@@ -218,17 +217,20 @@ class TestSagaOrchestrator:
 # Pattern 2 — Choreography-Based Saga / Event Bus
 # ---------------------------------------------------------------------------
 
+
 class TestChoreographyEventBus:
     def test_single_subscriber_receives_event(self, m):
         bus = m.ChoreographyEventBus()
         received = []
         bus.subscribe("order.created", lambda e: received.append(e.aggregate_id))
-        bus.emit(m.ChoreographyEvent(
-            event_id=str(uuid.uuid4()),
-            event_type="order.created",
-            aggregate_id="ORD-001",
-            payload={},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=str(uuid.uuid4()),
+                event_type="order.created",
+                aggregate_id="ORD-001",
+                payload={},
+            )
+        )
         assert received == ["ORD-001"]
 
     def test_multiple_subscribers_all_receive(self, m):
@@ -237,39 +239,48 @@ class TestChoreographyEventBus:
         bus.subscribe("payment.processed", lambda e: r1.append(e.event_id))
         bus.subscribe("payment.processed", lambda e: r2.append(e.event_id))
         eid = str(uuid.uuid4())
-        bus.emit(m.ChoreographyEvent(
-            event_id=eid,
-            event_type="payment.processed",
-            aggregate_id="PAY-001",
-            payload={},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=eid,
+                event_type="payment.processed",
+                aggregate_id="PAY-001",
+                payload={},
+            )
+        )
         assert eid in r1
         assert eid in r2
 
     def test_unsubscribed_handler_not_called(self, m):
         bus = m.ChoreographyEventBus()
         called = []
-        handler = lambda e: called.append(e.event_id)
+
+        def handler(e):
+            called.append(e.event_id)
+
         bus.subscribe("order.created", handler)
         bus.unsubscribe("order.created", handler)
-        bus.emit(m.ChoreographyEvent(
-            event_id=str(uuid.uuid4()),
-            event_type="order.created",
-            aggregate_id="ORD-002",
-            payload={},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=str(uuid.uuid4()),
+                event_type="order.created",
+                aggregate_id="ORD-002",
+                payload={},
+            )
+        )
         assert called == []
 
     def test_handler_for_wrong_event_not_called(self, m):
         bus = m.ChoreographyEventBus()
         called = []
         bus.subscribe("order.shipped", lambda e: called.append(True))
-        bus.emit(m.ChoreographyEvent(
-            event_id=str(uuid.uuid4()),
-            event_type="order.created",
-            aggregate_id="ORD-003",
-            payload={},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=str(uuid.uuid4()),
+                event_type="order.created",
+                aggregate_id="ORD-003",
+                payload={},
+            )
+        )
         assert called == []
 
     def test_handler_exception_does_not_break_other_handlers(self, m):
@@ -277,24 +288,28 @@ class TestChoreographyEventBus:
         good = []
         bus.subscribe("evt", lambda e: (_ for _ in ()).throw(ValueError("boom")))
         bus.subscribe("evt", lambda e: good.append(True))
-        bus.emit(m.ChoreographyEvent(
-            event_id=str(uuid.uuid4()),
-            event_type="evt",
-            aggregate_id="X",
-            payload={},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=str(uuid.uuid4()),
+                event_type="evt",
+                aggregate_id="X",
+                payload={},
+            )
+        )
         assert good == [True]
 
     def test_published_events_recorded(self, m):
         bus = m.ChoreographyEventBus()
         bus.subscribe("a", lambda e: None)
         for i in range(3):
-            bus.emit(m.ChoreographyEvent(
-                event_id=str(uuid.uuid4()),
-                event_type="a",
-                aggregate_id=f"AGG-{i}",
-                payload={},
-            ))
+            bus.emit(
+                m.ChoreographyEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type="a",
+                    aggregate_id=f"AGG-{i}",
+                    payload={},
+                )
+            )
         assert len(bus.published_events) == 3
 
     def test_thread_safety_concurrent_emit(self, m):
@@ -306,12 +321,14 @@ class TestChoreographyEventBus:
         threads = [
             threading.Thread(
                 target=bus.emit,
-                args=(m.ChoreographyEvent(
-                    event_id=str(uuid.uuid4()),
-                    event_type="concurrent",
-                    aggregate_id="X",
-                    payload={},
-                ),),
+                args=(
+                    m.ChoreographyEvent(
+                        event_id=str(uuid.uuid4()),
+                        event_type="concurrent",
+                        aggregate_id="X",
+                        payload={},
+                    ),
+                ),
             )
             for _ in range(10)
         ]
@@ -331,18 +348,21 @@ class TestChoreographyEventBus:
         bus = m.ChoreographyEventBus()
         payloads = []
         bus.subscribe("x", lambda e: payloads.append(e.payload))
-        bus.emit(m.ChoreographyEvent(
-            event_id=str(uuid.uuid4()),
-            event_type="x",
-            aggregate_id="A",
-            payload={"amount": 99.0},
-        ))
+        bus.emit(
+            m.ChoreographyEvent(
+                event_id=str(uuid.uuid4()),
+                event_type="x",
+                aggregate_id="A",
+                payload={"amount": 99.0},
+            )
+        )
         assert payloads[0]["amount"] == 99.0
 
 
 # ---------------------------------------------------------------------------
 # Pattern 3 — Transactional Outbox
 # ---------------------------------------------------------------------------
+
 
 class TestOutboxStore:
     def _msg(self, m, message_id="MSG-001"):
@@ -403,13 +423,15 @@ class TestOutboxPoller:
     def _make_store_with_messages(self, m, count=3):
         store = m.OutboxStore()
         for i in range(count):
-            store.save(m.OutboxMessage(
-                message_id=f"MSG-{i:03d}",
-                aggregate_type="Order",
-                aggregate_id=f"ORD-{i:03d}",
-                event_type="order.created",
-                payload={"index": i},
-            ))
+            store.save(
+                m.OutboxMessage(
+                    message_id=f"MSG-{i:03d}",
+                    aggregate_type="Order",
+                    aggregate_id=f"ORD-{i:03d}",
+                    event_type="order.created",
+                    payload={"index": i},
+                )
+            )
         return store
 
     def test_poll_publishes_all_pending(self, m):
@@ -447,7 +469,7 @@ class TestOutboxPoller:
             aggregate_id="ORD-X",
             event_type="order.created",
             payload={},
-            retry_count=3,   # already at max
+            retry_count=3,  # already at max
         )
         store.save(msg)
         published = []
@@ -467,6 +489,7 @@ class TestOutboxPoller:
 # ---------------------------------------------------------------------------
 # Pattern 4 — Dead Letter Queue
 # ---------------------------------------------------------------------------
+
 
 class TestDeadLetterQueue:
     def _msg(self, m, dlq_id="DLQ-001", queue_name="payments"):

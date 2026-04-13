@@ -17,9 +17,7 @@ from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "30_message_broker_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "30_message_broker_patterns.py"
 
 
 def _load_module():
@@ -44,7 +42,6 @@ def mod():
 
 
 class TestMessageQueue:
-
     # --- basic enqueue/dequeue ---
 
     def test_enqueue_and_dequeue_single_message(self, mod):
@@ -186,10 +183,7 @@ class TestMessageQueue:
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [
-            threading.Thread(target=producer, args=(t * 50, 50))
-            for t in range(10)
-        ]
+        threads = [threading.Thread(target=producer, args=(t * 50, 50)) for t in range(10)]
         for t in threads:
             t.start()
         for t in threads:
@@ -240,7 +234,6 @@ class TestMessageQueue:
 
 
 class TestTopicExchange:
-
     # --- exact match ---
 
     def test_exact_match_delivers_message(self, mod):
@@ -379,7 +372,6 @@ class TestTopicExchange:
 
 
 class TestFanoutExchange:
-
     # --- all subscribers receive ---
 
     def test_all_bound_queues_receive_message(self, mod):
@@ -464,7 +456,6 @@ class TestFanoutExchange:
 
 
 class TestMessageBatch:
-
     # --- add below batch_size returns None ---
 
     def test_add_below_batch_size_returns_none(self, mod):
@@ -544,7 +535,7 @@ class TestMessageBatch:
         batch.add({"n": 2})
         batch.add({"n": 3})  # auto-flush → 3
         batch.add({"n": 4})
-        batch.flush()           # manual flush → 1 more
+        batch.flush()  # manual flush → 1 more
         assert batch.total_flushed == 4
 
     # --- pending_count ---
@@ -579,7 +570,6 @@ class TestMessageBatch:
 
 
 class TestDeduplicationFilter:
-
     # --- new message → True ---
 
     def test_new_message_returns_true(self, mod):

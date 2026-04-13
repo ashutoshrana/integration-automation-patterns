@@ -1,4 +1,5 @@
 """Tests for 13_distributed_cache_patterns.py — Distributed Cache Patterns"""
+
 from __future__ import annotations
 
 import importlib.util
@@ -16,9 +17,7 @@ import pytest
 
 def _load_module(name: str):
     examples_dir = Path(__file__).parent.parent / "examples"
-    spec = importlib.util.spec_from_file_location(
-        name, examples_dir / "13_distributed_cache_patterns.py"
-    )
+    spec = importlib.util.spec_from_file_location(name, examples_dir / "13_distributed_cache_patterns.py")
     mod = types.ModuleType(name)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -105,8 +104,8 @@ class TestCacheAsidePattern:
 
     def test_cache_hit_avoids_store(self, m):
         pattern, cache, store = self._setup(m)
-        pattern.get("user:100")   # populates cache
-        store.read_count = 0      # reset counter
+        pattern.get("user:100")  # populates cache
+        store.read_count = 0  # reset counter
         val = pattern.get("user:100")
         assert val == {"id": 100, "name": "Alice"}
         assert store.read_count == 0
@@ -119,16 +118,18 @@ class TestCacheAsidePattern:
     def test_custom_loader_used_on_miss(self, m):
         pattern, cache, store = self._setup(m)
         calls = []
+
         def loader(k):
             calls.append(k)
             return {"custom": True}
+
         val = pattern.get("special:1", loader=loader)
         assert val == {"custom": True}
         assert "special:1" in calls
 
     def test_invalidate_evicts_cache(self, m):
         pattern, cache, store = self._setup(m)
-        pattern.get("user:100")   # populate
+        pattern.get("user:100")  # populate
         assert cache.exists("user:100")
         pattern.invalidate("user:100")
         assert not cache.exists("user:100")
@@ -140,7 +141,9 @@ class TestCacheAsidePattern:
         lock_mgr = m.DistributedLockManager("lock-0")
         ttl_strategy = m.TTLInvalidationStrategy(base_ttl_ms=10_000, jitter_factor=0.3)
         pattern = m.CacheAsidePattern(
-            cache, store, lock_mgr,
+            cache,
+            store,
+            lock_mgr,
             default_ttl_ms=10_000,
             ttl_strategy=ttl_strategy,
         )
@@ -503,11 +506,13 @@ class TestCacheWarmupStrategy:
     def test_warmup_from_store_prefix(self, m):
         cache = m.InMemoryStore("node-0")
         store = m.BackingDataStore()
-        store.seed({
-            "config:timeout": 30,
-            "config:retries": 3,
-            "user:001": "alice",
-        })
+        store.seed(
+            {
+                "config:timeout": 30,
+                "config:retries": 3,
+                "user:001": "alice",
+            }
+        )
         warmup = m.CacheWarmupStrategy(cache, store, default_ttl_ms=60_000)
         loaded = warmup.warmup_from_store_prefix("config:")
         assert loaded == 2

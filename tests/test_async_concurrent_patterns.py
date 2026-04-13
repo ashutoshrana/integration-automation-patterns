@@ -14,14 +14,11 @@ import sys
 import threading
 import time
 import types
-import unittest
 from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "29_async_concurrent_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "29_async_concurrent_patterns.py"
 
 
 def _load_module():
@@ -56,7 +53,6 @@ async def _noop(value=None):
 
 
 class TestAsyncTaskPool:
-
     # --- run_all ---
 
     def test_run_all_returns_results_in_submission_order(self, mod):
@@ -168,7 +164,6 @@ class TestAsyncTaskPool:
 
 
 class TestAsyncRetry:
-
     # --- success on first attempt ---
 
     def test_succeeds_first_attempt(self, mod):
@@ -262,9 +257,7 @@ class TestAsyncRetry:
     # --- backoff increases between retries ---
 
     def test_backoff_increases_between_retries(self, mod):
-        retry = mod.AsyncRetry(
-            max_attempts=4, base_delay=0.01, max_delay=10.0, jitter=False
-        )
+        retry = mod.AsyncRetry(max_attempts=4, base_delay=0.01, max_delay=10.0, jitter=False)
         timestamps = []
 
         async def record_and_fail():
@@ -276,18 +269,13 @@ class TestAsyncRetry:
         except mod.AsyncRetry.RetryExhausted:
             pass
 
-        gaps = [
-            timestamps[i + 1] - timestamps[i]
-            for i in range(len(timestamps) - 1)
-        ]
+        gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
         # Each gap should be larger than the previous (exponential backoff)
         for i in range(1, len(gaps)):
             assert gaps[i] > gaps[i - 1] * 0.5
 
     def test_max_delay_caps_backoff(self, mod):
-        retry = mod.AsyncRetry(
-            max_attempts=5, base_delay=0.5, max_delay=0.01, jitter=False
-        )
+        retry = mod.AsyncRetry(max_attempts=5, base_delay=0.5, max_delay=0.01, jitter=False)
         start = time.monotonic()
 
         async def fail():
@@ -313,7 +301,6 @@ class TestAsyncRetry:
 
 
 class TestAsyncPipeline:
-
     # --- single stage ---
 
     def test_single_stage_transforms_items(self, mod):
@@ -461,7 +448,6 @@ class TestAsyncPipeline:
 
 
 class TestThreadSafeCache:
-
     # --- set/get ---
 
     def test_set_and_get_returns_value(self, mod):
@@ -559,10 +545,7 @@ class TestThreadSafeCache:
             except Exception as e:
                 errors.append(e)
 
-        threads = [
-            threading.Thread(target=writer, args=(f"t{t}", 50))
-            for t in range(10)
-        ]
+        threads = [threading.Thread(target=writer, args=(f"t{t}", 50)) for t in range(10)]
         for t in threads:
             t.start()
         for t in threads:
@@ -610,7 +593,6 @@ class TestThreadSafeCache:
 
 
 class TestWorkerPool:
-
     # --- submit ---
 
     def test_submit_returns_future(self, mod):
