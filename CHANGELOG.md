@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.1] — 2026-04-13
+
+### Added
+- `rate_limiter.py`: `SlidingWindowRateLimiter` — thread-safe sliding-window rate limiter for enterprise CRM/ERP API rate windows (Salesforce 24h, HubSpot 10s, etc.). Tracks request timestamps in a rolling deque; enforces hard count limits within configurable windows. Supports blocking/non-blocking `acquire()`, `async_acquire()`, `try_acquire()`, `utilization()` (returns 0.0–1.0 utilization fraction), and `requests_in_window()`. Closes #21.
+- `__init__.py`: exports `SlidingWindowRateLimiter`
+
+---
+
 ## [0.4.0] — 2026-04-12
 
 ### Added

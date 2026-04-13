@@ -57,10 +57,7 @@ class RateLimitExceeded(Exception):
     def __init__(self, tokens_available: float, cost: float) -> None:
         self.tokens_available = tokens_available
         self.cost = cost
-        super().__init__(
-            f"Rate limit exceeded: requested {cost} tokens but only "
-            f"{tokens_available:.2f} available."
-        )
+        super().__init__(f"Rate limit exceeded: requested {cost} tokens but only {tokens_available:.2f} available.")
 
 
 class TokenBucketRateLimiter:
@@ -252,3 +249,193 @@ class TokenBucketRateLimiter:
         added = elapsed * self._refill_rate
         self._tokens = min(self._capacity, self._tokens + added)
         self._last_refill = now
+
+
+# ---------------------------------------------------------------------------
+# SlidingWindowRateLimiter
+# ---------------------------------------------------------------------------
+
+
+class SlidingWindowRateLimiter:
+    """
+    Thread-safe sliding-window rate limiter for enterprise CRM API rate windows.
+
+    Enterprise CRM and ERP APIs (Salesforce, HubSpot, Workday, ServiceNow)
+    enforce **sliding-window** limits: a maximum number of requests within a
+    rolling time window (e.g. 1,000,000 Salesforce API calls per 24-hour window).
+
+    Unlike the token bucket (which models burst rate), the sliding window tracks
+    the exact timestamps of recent requests and enforces a hard count limit
+    within the rolling window.
+
+    Args:
+        limit: Maximum number of requests allowed in the window.
+        window_seconds: Size of the rolling window in seconds.
+                        Example: ``86400`` for a 24-hour window.
+
+    Example — Salesforce daily API budget::
+
+        # 100,000 calls per rolling 24-hour window
+        sf_limiter = SlidingWindowRateLimiter(limit=100_000, window_seconds=86400)
+
+        if sf_limiter.try_acquire():
+            result = sf.query("SELECT Id FROM Account")
+        else:
+            raise APIBudgetExhausted("Salesforce daily limit reached")
+
+    Example — HubSpot per-10-second burst::
+
+        hubspot_limiter = SlidingWindowRateLimiter(limit=10, window_seconds=10)
+    """
+
+    def __init__(self, limit: int, window_seconds: float) -> None:
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        if window_seconds <= 0:
+            raise ValueError("window_seconds must be positive")
+        self._limit = limit
+        self._window = window_seconds
+        self._timestamps: list[float] = []
+        self._lock = Lock()
+
+    @property
+    def limit(self) -> int:
+        """Maximum requests allowed in the window."""
+        return self._limit
+
+    @property
+    def window_seconds(self) -> float:
+        """Window size in seconds."""
+        return self._window
+
+    def acquire(
+        self,
+        blocking: bool = False,
+        max_wait_seconds: float = 30.0,
+    ) -> float:
+        """
+        Acquire one request slot in the sliding window.
+
+        Args:
+            blocking: If ``True``, block until a slot opens (up to
+                      ``max_wait_seconds``). If ``False`` (default), raise
+                      ``RateLimitExceeded`` immediately if the window is full.
+            max_wait_seconds: Upper bound on blocking wait time.
+
+        Returns:
+            Actual wait time in seconds (0.0 if slot was immediately available).
+
+        Raises:
+            RateLimitExceeded: If non-blocking and window is full, or if
+                               ``max_wait_seconds`` exceeded.
+        """
+        deadline = time.monotonic() + max_wait_seconds
+        total_wait = 0.0
+
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                self._evict(now)
+                if len(self._timestamps) < self._limit:
+                    self._timestamps.append(now)
+                    return total_wait
+
+                if not blocking:
+                    raise RateLimitExceeded(
+                        tokens_available=self._limit - len(self._timestamps),
+                        cost=1.0,
+                    )
+
+                # Oldest timestamp determines when the next slot opens
+                oldest = self._timestamps[0]
+                wait_needed = (oldest + self._window) - now
+
+            remaining = deadline - time.monotonic()
+            if wait_needed > remaining:
+                raise RateLimitExceeded(
+                    tokens_available=self._limit - len(self._timestamps),
+                    cost=1.0,
+                )
+
+            sleep_time = min(wait_needed, remaining, 0.1)
+            time.sleep(sleep_time)
+            total_wait += sleep_time
+
+    async def async_acquire(self, max_wait_seconds: float = 30.0) -> float:
+        """
+        Async variant of ``acquire()``. Uses ``asyncio.sleep`` to yield the
+        event loop while waiting.
+
+        Args:
+            max_wait_seconds: Maximum wait time.
+
+        Returns:
+            Total wait time in seconds.
+        """
+        deadline = time.monotonic() + max_wait_seconds
+        total_wait = 0.0
+
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                self._evict(now)
+                if len(self._timestamps) < self._limit:
+                    self._timestamps.append(now)
+                    return total_wait
+
+                oldest = self._timestamps[0]
+                wait_needed = (oldest + self._window) - now
+
+            remaining = deadline - time.monotonic()
+            if wait_needed > remaining:
+                raise RateLimitExceeded(
+                    tokens_available=self._limit - len(self._timestamps),
+                    cost=1.0,
+                )
+
+            sleep_time = min(wait_needed, remaining, 0.05)
+            await asyncio.sleep(sleep_time)
+            total_wait += sleep_time
+
+    def try_acquire(self) -> bool:
+        """
+        Non-blocking attempt. Returns ``True`` if a slot was acquired,
+        ``False`` if the window is full.
+        """
+        try:
+            self.acquire(blocking=False)
+            return True
+        except RateLimitExceeded:
+            return False
+
+    def utilization(self) -> float:
+        """
+        Current window utilization as a fraction of the limit (0.0–1.0).
+
+        Useful for monitoring and back-pressure decisions.
+
+        Example::
+
+            if limiter.utilization() > 0.9:
+                alert("Salesforce API budget at 90% — throttle integrations")
+        """
+        with self._lock:
+            self._evict(time.monotonic())
+            return len(self._timestamps) / self._limit
+
+    def requests_in_window(self) -> int:
+        """Return count of requests within the current rolling window."""
+        with self._lock:
+            self._evict(time.monotonic())
+            return len(self._timestamps)
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _evict(self, now: float) -> None:
+        """Remove timestamps older than the window. Must hold ``_lock``."""
+        cutoff = now - self._window
+        # Timestamps are appended in order; evict from the front
+        while self._timestamps and self._timestamps[0] <= cutoff:
+            self._timestamps.pop(0)
