@@ -6,6 +6,31 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.3] — 2026-04-13
+
+### Added — Observability, Recovery Runbook, and Orchestration Boundary ADR
+
+**`docs/implementation-note-04.md`** — "Observability and Recovery for Enterprise Integration":
+- Event pipeline metrics: `events.dispatched/processed/failed/skipped/dead_lettered`, consumer lag
+- Failure classification: Class 1 (transient), Class 2 (permanent), Class 3 (poison)
+- Step-by-step recovery runbook: triage DLQ, fix root cause, safe Class 1 replay
+- Deduplication observability: `dedup.store_hits/misses/errors`
+- Structured event logging pattern using `to_audit_line()`
+- Real incident case study showing the cost of missing observability
+- Closes #3.
+
+**`docs/adr/003-orchestration-vs-integration-boundaries.md`** — "Workflow Orchestration
+Boundaries: What belongs in orchestration vs integration":
+- Hard boundary: integration owns transport (retry, dedup, broker format); orchestration
+  owns business process (step sequence, approval checkpoints, compensation, escalation)
+- Test for boundary: "if I replace the broker, does this code change?"
+- What does NOT belong in the integration layer (business approval logic, SLA tracking)
+- Domain event interface between layers: `CRMUpdateApplied` vs `ProcessApproved`
+- Rejected alternatives: stateful integration handlers, orchestration-aware envelopes
+- Closes #2.
+
+---
+
 ## [0.5.2] — 2026-04-13
 
 ### Added — Idempotent CRM Update Example
