@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 39 examples, 1704 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 40 examples, 1780 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 39 patterns
+## Example catalog — 40 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -129,6 +129,7 @@ conflicts = boundary.detect_conflict(
 | 37 | `37_rate_limiting_patterns.py` | Rate Limiting / Throttling | SlidingWindowRateLimiter (deque-based per-client: allow/remaining/reset_at, thread-safe) + TokenBucketLimiter (burst capacity: lazy refill via monotonic(), consume(tokens)/available_tokens) + AdaptiveThrottler (AIMD: record_success/record_failure×0.5, allow() via internal token bucket) + QuotaManager (3-tier per-second/per-minute/per-day: atomic all-or-nothing consume, status, reset) + CircuitBreakerRateLimiter (sliding window + CLOSED/OPEN/HALF_OPEN: call(fn) raises RateLimitExceeded or CircuitOpen) |
 | 38 | `38_reactive_streams_patterns.py` | Reactive Streams / Backpressure | BatchProcessor (configurable batch_size + flush_timeout_ms: thread-safe accumulate/flush, stats) + StreamProcessor (generator pipeline: transform/filter/window stage chaining, drain) + ETLPipeline (extract→transform→load with per-record error handling and ETLResult stats) + DataLineage (node/edge DAG: add_node/add_edge, get_upstream/get_downstream DFS, impact_analysis) + DataQualityChecker (completeness/uniqueness/range/pattern/custom rules, quality_score 0–1, DataQualityError) |
 | 39 | `39_distributed_tracing_patterns.py` | Distributed Tracing / Observability | TraceContext (W3C traceparent: uuid4 trace_id/span_id, to_traceparent/from_traceparent, child_context(), sampling_flag) + Span (start/finish timing, add_event, set_status OK/ERROR/UNSET, to_dict() serialization, live duration_ms) + Tracer (active+completed span lists, threading.Lock, get_trace sorted by start_time, export) + SamplingStrategy (deterministic hash-based: always_on/always_off/ratio, should_sample) + TraceExporter (get_by_service/get_errors/get_slow_spans filters, clear) |
+| 40 | `40_saga_choreography_patterns.py` | Saga Choreography / Distributed Transactions | SagaEvent (frozen dataclass: event_id/saga_id/event_type/payload/timestamp/sequence, create() classmethod UUID factory) + SagaParticipant (execute/compensate with event recording, executed_count/compensated_count) + SagaChoreographer (event bus: register_handler, start/complete/fail_saga, publish_event collects responses, get_saga_status/events) + CompensationEngine (reverse-order rollback: record_execution, compensate_all() reverses execution list, compensation_count) + SagaMonitor (configurable timeout_seconds, record_start/end, is_timed_out, get_stats 5-bucket, get_timed_out_sagas) |
 
 ---
 
@@ -256,9 +257,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 46 sectors · 63 regulations · 1668 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 37 governance examples · 23 jurisdictions · 2291 tests |
-| **integration-automation-patterns** | How data flows | 39 patterns · schema registry · GraphQL · 1704 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 47 sectors · 64 regulations · 1722 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 38 governance examples · 25 jurisdictions · 2451 tests |
+| **integration-automation-patterns** | How data flows | 40 patterns · schema registry · GraphQL · 1780 tests |
 
 ---
 

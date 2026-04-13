@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.40.0] — 2026-04-13
+
+### Added — Saga Choreography and Distributed Transaction Patterns (`40_saga_choreography_patterns.py`)
+
+Five pure-Python (stdlib-only) event-driven saga choreography primitives:
+
+- `SagaEvent` — frozen dataclass: event_id/saga_id/event_type/payload/timestamp/sequence; `create()` classmethod generates uuid4 event_ids
+- `SagaParticipant` — local + compensating transactions: `execute()`/`compensate()` record events and return response SagaEvents; `executed_count()`/`compensated_count()`
+- `SagaChoreographer` — event bus: `register_handler`, `start_saga`/`complete_saga`/`fail_saga`, `publish_event()` collects all handler responses, `get_saga_status`/`get_saga_events`
+- `CompensationEngine` — reverse-order rollback: `record_execution()`, `compensate_all()` iterates in reverse execution order, `compensation_count()`
+- `SagaMonitor` — configurable `timeout_seconds`: `record_saga_start`/`record_saga_end`, `is_timed_out()`, `get_stats()` (total/completed/failed/running/timed_out), `get_timed_out_sagas()`
+
+76 new tests. Total: **1780 passed**.
+
+---
+
 ## [0.39.0] — 2026-04-13
 
 ### Added — Distributed Tracing and Observability Patterns (`39_distributed_tracing_patterns.py`)
