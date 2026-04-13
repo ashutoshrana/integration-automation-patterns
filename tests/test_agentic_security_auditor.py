@@ -19,9 +19,7 @@ import types
 # ---------------------------------------------------------------------------
 
 _MOD_NAME = "agentic_security_auditor_43"
-_EXAMPLE_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "examples", "43_agentic_security_auditor.py"
-)
+_EXAMPLE_PATH = os.path.join(os.path.dirname(__file__), "..", "examples", "43_agentic_security_auditor.py")
 
 spec = importlib.util.spec_from_file_location(_MOD_NAME, _EXAMPLE_PATH)
 mod = types.ModuleType(_MOD_NAME)
@@ -107,16 +105,28 @@ class TestAgenticSystemConfigDefaults:
     def test_all_bool_fields_default_false(self):
         cfg = AgenticSystemConfig()
         bool_fields = [
-            "tool_scope_enforced", "tool_output_validated", "unsafe_tool_calls_blocked",
-            "mcp_enabled", "mcp_source_allowlisted", "mcp_checksum_verified",
-            "mcp_rate_limiting_enabled", "mcp_invocation_audit_logged",
-            "agent_identity_enforced", "caller_context_propagated",
-            "privilege_escalation_prevented", "memory_access_scoped",
-            "prompt_context_sanitized", "long_term_memory_encrypted",
-            "multi_agent_enabled", "agent_trust_boundaries_defined",
-            "inter_agent_message_signed", "agent_composition_validated",
-            "tool_invocation_logging", "reasoning_trace_captured",
-            "hitl_for_high_risk_actions", "autonomous_action_rate_limited",
+            "tool_scope_enforced",
+            "tool_output_validated",
+            "unsafe_tool_calls_blocked",
+            "mcp_enabled",
+            "mcp_source_allowlisted",
+            "mcp_checksum_verified",
+            "mcp_rate_limiting_enabled",
+            "mcp_invocation_audit_logged",
+            "agent_identity_enforced",
+            "caller_context_propagated",
+            "privilege_escalation_prevented",
+            "memory_access_scoped",
+            "prompt_context_sanitized",
+            "long_term_memory_encrypted",
+            "multi_agent_enabled",
+            "agent_trust_boundaries_defined",
+            "inter_agent_message_signed",
+            "agent_composition_validated",
+            "tool_invocation_logging",
+            "reasoning_trace_captured",
+            "hitl_for_high_risk_actions",
+            "autonomous_action_rate_limited",
             "incident_response_playbook",
         ]
         for field in bool_fields:
@@ -181,9 +191,7 @@ class TestMCPControls:
         mcp_findings = [f for f in report.findings if f.control_id.startswith("AGT-MCP-")]
         assert len(mcp_findings) > 0
         for f in mcp_findings:
-            assert f.status == "SKIP", (
-                f"{f.control_id} should be SKIP when mcp_enabled=False, got {f.status}"
-            )
+            assert f.status == "SKIP", f"{f.control_id} should be SKIP when mcp_enabled=False, got {f.status}"
 
     def test_mcp_enabled_source_not_allowlisted_is_fail_critical(self):
         report = _run(_all_off_config(mcp_enabled=True, mcp_source_allowlisted=False))
@@ -202,9 +210,7 @@ class TestMCPControls:
         report = _run(cfg)
         mcp_findings = [f for f in report.findings if f.control_id.startswith("AGT-MCP-")]
         for f in mcp_findings:
-            assert f.status == "PASS", (
-                f"{f.control_id} should PASS when all MCP flags True, got {f.status}"
-            )
+            assert f.status == "PASS", f"{f.control_id} should PASS when all MCP flags True, got {f.status}"
 
     def test_mcp_enabled_no_mcp_controls_are_skip(self):
         """When mcp_enabled=True, MCP controls should NOT be SKIP."""
@@ -225,14 +231,10 @@ class TestMultiAgentControls:
         ma_findings = [f for f in report.findings if f.control_id.startswith("AGT-MA-")]
         assert len(ma_findings) > 0
         for f in ma_findings:
-            assert f.status == "SKIP", (
-                f"{f.control_id} should be SKIP when multi_agent_enabled=False, got {f.status}"
-            )
+            assert f.status == "SKIP", f"{f.control_id} should be SKIP when multi_agent_enabled=False, got {f.status}"
 
     def test_multi_agent_enabled_trust_boundaries_not_defined_is_fail_critical(self):
-        report = _run(
-            _all_off_config(multi_agent_enabled=True, agent_trust_boundaries_defined=False)
-        )
+        report = _run(_all_off_config(multi_agent_enabled=True, agent_trust_boundaries_defined=False))
         finding = _find(report, "AGT-MA-001")
         assert finding.status == "FAIL"
         assert finding.severity == "CRITICAL"
@@ -351,6 +353,4 @@ class TestAgentAuditReportHelpers:
     def test_framework_refs_nonempty_for_all_findings(self):
         report = _run(_all_off_config())
         for f in report.findings:
-            assert len(f.framework_refs) > 0, (
-                f"{f.control_id} has empty framework_refs"
-            )
+            assert len(f.framework_refs) > 0, f"{f.control_id} has empty framework_refs"
