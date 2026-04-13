@@ -6,6 +6,41 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.19.0] — 2026-04-13
+
+### Added — Data Pipeline Patterns (ETL with Checkpointing + Data Quality Validation + Metrics)
+
+**`examples/20_data_pipeline_patterns.py`** — ETL pipeline patterns for fault-tolerant,
+resumable data processing with data quality gates, stage-level checkpointing, and
+observability metrics. Applicable to batch processing, data warehousing, and data migration
+workflows.
+
+**New classes:**
+- `StageStatus` — PENDING / RUNNING / COMPLETED / FAILED / SKIPPED
+- `QualityRuleType` — COMPLETENESS / UNIQUENESS / RANGE / REGEX / CUSTOM
+- `DataPipelineError` — raised when a stage fails fatally
+- `QualityGateError` — raised when quality threshold not met
+- `DataRecord` — record_id, payload, metadata dict; `with_metadata(**kwargs)` for immutable updates
+- `QualityRule` — configurable rule with type-specific fields (required_fields, key_field,
+  field_name, min_value, max_value, pattern, predicate)
+- `QualityReport` — per-rule pass/fail counts, failed_record_ids, `pass_rate` property,
+  `all_passed` property
+- `CheckpointStore` — in-memory checkpoint for run resumability; `save_stage()`,
+  `get_stage_status()`, `mark_processed()`, `is_processed()`, `get_unprocessed()`,
+  `clear_run()`, `completed_stages()`
+- `DataQualityValidator` — fluent `add_rule()` API; `validate(records)→List[QualityReport]`;
+  `validate_with_threshold(records, min_pass_rate)` raises QualityGateError on failure
+- `PipelineStage` — stage_id, extract_fn, transform_fn, load_fn, quality_rules,
+  min_quality_pass_rate, skip_on_checkpoint flag
+- `PipelineMetrics` — records_extracted/transformed/loaded/failed, quality_reports,
+  stage_durations dict, timing; `total_duration` and `success_rate` properties
+- `ETLPipeline` — fluent `add_stage()` API; `run(run_id)→PipelineMetrics` with full
+  checkpoint + quality gate integration; `stage_ids()`, `reset_run()`
+
+**Tests:** 27 tests in `tests/test_data_pipeline_patterns.py`
+
+---
+
 ## [0.18.0] — 2026-04-13
 
 ### Added — Workflow Orchestration Patterns (State Machine + Activity Execution + Compensation + Retry)
