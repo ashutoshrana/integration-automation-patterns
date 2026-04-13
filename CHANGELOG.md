@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.4] — 2026-04-13
+
+### Added — End-to-End Integration Example
+
+**`examples/06_end_to_end_integration.py`** — all four core patterns working together in a
+Salesforce Contact Created → SAP S/4HANA Customer Master Record synchronization flow:
+- Step 1: `WebhookHandler` — HMAC-SHA256 signature verification of inbound Salesforce webhook
+- Step 2: `ProcessedWebhookStore` — idempotent reception; duplicate event_ids rejected
+- Step 3: `CDCEvent.from_debezium()` — webhook payload normalized to canonical CDC envelope
+- Step 4: `SagaOrchestrator` — 4-step saga (validate → SAP create → CRM sync → welcome email)
+  with automatic compensation on failure (reverse order rollback)
+- Step 5: `OutboxProcessor` — at-least-once broker relay for all saga completion events
+- Scenario A: happy path — all 4 steps succeed; 3 events published to broker
+- Scenario B: compensation — CRM sync fails after SAP succeeds → `SAPCustomerDeleted` +
+  `SagaCompensated` published; SAP record cleanly rolled back
+- Scenario C: webhook replay — duplicate `event_id` identified by deduplication store, skipped
+- Integration pattern map showing component × responsibility breakdown
+- Closes #22.
+
+---
+
 ## [0.5.3] — 2026-04-13
 
 ### Added — Observability, Recovery Runbook, and Orchestration Boundary ADR
