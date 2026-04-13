@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.38.0] — 2026-04-13
+
+### Added — Reactive Streams and Data Pipeline Patterns (`38_reactive_streams_patterns.py`)
+
+Five pure-Python reactive stream processing and data pipeline primitives:
+
+- `BatchProcessor` — configurable `batch_size` + `flush_timeout_ms`; thread-safe `process`/`flush`; returns `BatchResult` with success/failure counts and stats
+- `StreamProcessor` — generator-based pipeline DSL: `transform`, `filter`, `window` stage chaining; lazy evaluation via `drain()`
+- `ETLPipeline` — extract→transform→load orchestration with per-record error handling; `ETLResult` with processed/failed/skipped counts and duration
+- `DataLineage` — node/edge DAG: `add_node`/`add_edge`; `get_upstream`/`get_downstream` DFS traversal; `impact_analysis` reachability; cycle detection
+- `DataQualityChecker` — completeness/uniqueness/range/pattern/custom rules; `quality_score` (0.0–1.0); raises `DataQualityError` on threshold breach
+
+89 new tests. Total: **1592 passed**.
+
+---
+
 ## [0.37.0] — 2026-04-13
 
 ### Added — Rate Limiting and Throttling Patterns (`37_rate_limiting_patterns.py`)
