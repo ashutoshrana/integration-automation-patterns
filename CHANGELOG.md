@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.41.0] — 2026-04-13
+
+### Added — API Versioning and Contract Testing Patterns (`41_api_versioning_patterns.py`)
+
+Five pure-Python (stdlib-only) API versioning and contract management primitives:
+
+- `SemanticVersion` — frozen dataclass: `parse("1.2.3")`, `is_compatible_with()` (same major, minor >=), `is_breaking_change_from()` (major >), rich comparisons (`__lt__/le/gt/ge`), `__str__`
+- `APIContract` — `validate_request()` (missing required fields), `validate_response()` (expected fields present), `is_backward_compatible_with()` (older required fields still present)
+- `VersionRouter` — exact-match first, then highest-compatible-minor fallback; raises `ValueError` when no compatible version; `available_versions()` sorted, `latest_version()`
+- `ChangelogEntry` — BREAKING/FEATURE/FIX change_type; `is_breaking()` predicate
+- `APIVersionManager` — `register_version()`, `deprecate()`, `get_supported_versions()` (non-deprecated), `get_changelog(since_version)`, `get_breaking_changes(since_version)` filtered
+
+86 new tests. Total: **1866 passed**.
+
+---
+
 ## [0.40.0] — 2026-04-13
 
 ### Added — Saga Choreography and Distributed Transaction Patterns (`40_saga_choreography_patterns.py`)
