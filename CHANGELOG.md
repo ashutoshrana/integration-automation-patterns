@@ -6,6 +6,69 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.12.0] — 2026-04-13
+
+### Added — Distributed Cache Patterns
+
+**`examples/13_distributed_cache_patterns.py`** — reference implementation of seven enterprise
+distributed caching patterns addressing the five core failure modes that caching introduces:
+stampede/thundering herd, write consistency, cross-node invalidation, TTL coordination, and cold-start.
+
+New classes (self-contained in the example):
+- `CacheEntry` — cache entry with value, created_at, expires_at, version, last_accessed_at;
+  `is_expired` property; `ttl_remaining_ms` property
+- `WriteBufferEntry` — pending write-behind entry with key, value, enqueued_at, attempts
+- `LockState` — ACQUIRED, EXPIRED, RELEASED
+- `FencingToken` — monotonically increasing lock grant: token_id, lock_key, holder_id, sequence,
+  granted_at, expires_at, state; `is_valid` property for pre-write validation
+- `InvalidationReason` — TTL_EXPIRED, EXPLICIT_DELETE, DEPENDENCY_CHANGED, CAPACITY_EVICTION,
+  BUS_INVALIDATION
+- `InvalidationEvent` — bus message: event_id, key, reason, source_node_id, timestamp, dependency_key
+- `WarmupRecord` — priority-ordered warmup entry: key, value, priority, source
+- `InMemoryStore` — thread-safe in-memory cache with TTL enforcement, hit/miss counters, `keys()`
+  (excludes expired); simulates Redis/Memcached as cache backend
+- `BackingDataStore` — simulated RDBMS with read/write counters and configurable latency
+- `CacheAsidePattern` — lazy-load with stampede protection: acquire distributed lock before
+  regenerating; double-check after lock acquisition; custom loader support; TTL jitter via
+  TTLInvalidationStrategy
+- `WriteThroughCache` — synchronous write to cache + store; store-fallback on cache miss;
+  custom TTL per write; delete removes from both
+- `WriteBehindCache` — immediate cache write + async buffer; `flush()` drains to store;
+  dict-based deduplication (last writer wins); flow control via max_buffer_size auto-flush;
+  flush_count and pending_count instrumentation
+- `TTLInvalidationStrategy` — jitter (±factor% of base), sliding window renewal detection,
+  dependency graph with transitive traversal (`register_dependency`, `get_dependent_keys`);
+  cycle-safe via visited set
+- `DistributedLockManager` — fencing token-based distributed lock; monotonic sequence counter
+  per lock key; `acquire()` returns FencingToken or None; `release()` returns bool;
+  `validate_token()` for pre-write fencing check; `is_locked()` for observability;
+  thread-safe via threading.Lock
+- `CacheInvalidationBus` — publish/subscribe invalidation fan-out; `subscribe()` registers
+  node callbacks; `publish()` delivers to all subscribers; source node filtering in
+  InvalidatingCache; `published_count()` and `last_event()` for observability
+- `InvalidatingCache` — InMemoryStore + bus subscriber; `invalidate_and_publish()` combines
+  local eviction + bus publication; `_eviction_count` for observability
+- `CacheWarmupStrategy` — three warmup strategies: snapshot records (priority-sorted),
+  key list replay (from access logs), store prefix scan; max_warmup_keys flow control;
+  `loaded_count` accumulator
+
+7 demo functions covering all patterns: cache-aside stampede protection, write-through,
+write-behind with flush, TTL jitter and dependency graph, distributed lock with fencing tokens,
+multi-node invalidation bus, and startup cache warmup.
+
+**`docs/implementation-note-11.md`** — "Distributed Cache Patterns: When Adding a Cache Makes
+Things Harder": explains the five cache failure modes (stampede, consistency, cross-node invalidation,
+dependency invalidation, cold start), design rationale for each pattern, TTL jitter math,
+fencing token split-brain prevention, production transport options (Redis Pub/Sub, Kafka,
+Redis Streams), and a decision guide for pattern selection by use case.
+
+Tests: 58 new tests in `tests/test_distributed_cache_patterns.py` — TestInMemoryStore (8),
+TestCacheAsidePattern (6), TestWriteThroughCache (5), TestWriteBehindCache (6),
+TestTTLInvalidationStrategy (7), TestDistributedLockManager (8), TestCacheInvalidationBus (5),
+TestCacheWarmupStrategy (6), TestDemos (7)
+
+---
+
 ## [0.11.0] — 2026-04-13
 
 ### Added — Event Streaming Temporal Window Patterns
