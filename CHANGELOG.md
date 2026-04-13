@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.37.0] — 2026-04-13
+
+### Added — Rate Limiting and Throttling Patterns (`37_rate_limiting_patterns.py`)
+
+Five pure-Python API rate-limiting and throttling primitives:
+
+- `SlidingWindowRateLimiter` — per-client sliding window via `collections.deque`; `allow` / `remaining` / `reset_at`; evicts expired timestamps on every call; thread-safe with `threading.Lock`
+- `TokenBucketLimiter` — token-bucket algorithm with burst capacity; lazy refill via `time.monotonic()` elapsed; `consume(tokens)` + `available_tokens`; thread-safe
+- `AdaptiveThrottler` — AIMD algorithm: `record_success` adds `increase_step` rps toward `max_rps`; `record_failure` halves rate (floor = `min_rps`); `allow` uses internal token bucket at current RPS
+- `QuotaManager` — three-tier (per-second / per-minute / per-day) quota; `consume` atomically checks and decrements all tiers or rejects; `status` returns `{tier: (used, limit, reset_at)}`; `reset` clears all tiers
+- `CircuitBreakerRateLimiter` — sliding-window rate limiter + CLOSED/OPEN/HALF_OPEN circuit breaker; `call(fn)` raises `RateLimitExceeded` or `CircuitOpen`; failed probe re-opens; successful probe closes
+
+74 new tests. Total: **1503 passed**.
+
+---
+
 ## [0.36.0] — 2026-04-13
 
 ### Added — Workflow State Machine Patterns (`36_workflow_state_machine.py`)

@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 36 examples, 1429 tests.**
+**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 37 examples, 1503 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -86,7 +86,7 @@ conflicts = boundary.detect_conflict(
 
 ---
 
-## Example catalog — 36 patterns
+## Example catalog — 37 patterns
 
 | # | File | Pattern | Problem Solved |
 |---|------|---------|---------------|
@@ -126,6 +126,7 @@ conflicts = boundary.detect_conflict(
 | 34 | `34_distributed_transaction_patterns.py` | Distributed Transactions | TwoPhaseCommit (2PC coordinator: prepare/commit/rollback with participant vote) + CompensatingTransaction (Saga-style: LIFO compensation on failure, method-chaining add_step) + DistributedLock (token-based TTL lock, reentrant support, TTL extension, blocking acquire with timeout) + TransactionCoordinator (multi-resource coordinator: LIFO rollback, UUID-keyed enlisted resources) |
 | 35 | `35_event_sourcing_advanced.py` | Event Sourcing Advanced | EventProjector (handler dispatch + state accumulation, reset) + EventUpcaster (version-ordered schema migrations, current_version) + EventReplay (since/by_aggregate/by_type/between filtering) + CausationChain (causation_id + correlation_id tracking, chain walk with cycle guard, correlation_group) + TemporalQuery (state_at point-in-time replay, events_in_window, latest_before) |
 | 36 | `36_workflow_state_machine.py` | Workflow State Machine | StateMachine (FSM: add_state on_enter/on_exit + add_transition guard+action + trigger + can_trigger) + HierarchicalStateMachine (composite states: add_child_state + set_initial_child + enter_state auto-descend + is_in_state ancestor walk) + WorkflowEngine (multi-step orchestrator: per-step max_retries + exponential backoff + timeout_ms via ThreadPoolExecutor + WorkflowResult) + ConditionalRouter (first-match routing: register_route + register_default + route, ValueError on no match) + ParallelWorkflow (ThreadPoolExecutor: run with timeout + run_until_first_success cancels remaining) |
+| 37 | `37_rate_limiting_patterns.py` | Rate Limiting / Throttling | SlidingWindowRateLimiter (deque-based per-client: allow/remaining/reset_at, thread-safe) + TokenBucketLimiter (burst capacity: lazy refill via monotonic(), consume(tokens)/available_tokens) + AdaptiveThrottler (AIMD: record_success/record_failure×0.5, allow() via internal token bucket) + QuotaManager (3-tier per-second/per-minute/per-day: atomic all-or-nothing consume, status, reset) + CircuitBreakerRateLimiter (sliding window + CLOSED/OPEN/HALF_OPEN: call(fn) raises RateLimitExceeded or CircuitOpen) |
 
 ---
 
@@ -253,9 +254,9 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 43 sectors · 54 regulations · 1492 tests |
-| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 34 governance examples · 20 jurisdictions · 1973 tests |
-| **integration-automation-patterns** | How data flows | 36 patterns · schema registry · GraphQL · 1429 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 44 sectors · 58 regulations · 1548 tests |
+| [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 35 governance examples · 21 jurisdictions · 2023 tests |
+| **integration-automation-patterns** | How data flows | 37 patterns · schema registry · GraphQL · 1503 tests |
 
 ---
 
