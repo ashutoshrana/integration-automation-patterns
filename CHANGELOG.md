@@ -6,6 +6,68 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.9.0] — 2026-04-13
+
+### Added — Schema Evolution and Consumer Version Compatibility Example + Implementation Note
+
+**`examples/10_schema_evolution.py`** — schema evolution patterns for distributed
+event-driven systems (Salesforce OpportunityUpdated pipeline, v1.0 → v2.0 migration):
+
+New classes (self-contained in the example):
+- `FieldEvolutionRule` — classification of field changes by compatibility impact:
+  NEW_OPTIONAL_FIELD + REQUIRED_TO_OPTIONAL + FIELD_DEPRECATED (fully compatible);
+  FIELD_REMOVED (forward compatible); FIELD_RENAMED + TYPE_CHANGED + NEW_REQUIRED_FIELD
+  (breaking — require major version bump)
+- `SchemaVersion` — semantic version (major.minor.patch) with explicit compatibility
+  contracts: `is_backward_compatible_with()` and `is_forward_compatible_with()`
+  enforce the same-major-version rule; cross-major requires migration
+- `FieldSchema` — per-field definition: name, type, required, default, deprecated_since
+- `EventSchema` — versioned schema with `validate()` (required fields check) and
+  `apply_defaults()` (fills optional field defaults for cross-version reads)
+- `SchemaRegistry` — central schema store: `register()`, `validate()`,
+  `resolve_reader(producer_version, consumer_version)` → compatibility mode + notes
+- `MigrationRule` — per-field transformation: FIELD_RENAMED (rename key),
+  TYPE_CHANGED (apply transform callable), NEW_REQUIRED_FIELD (inject default)
+- `SchemaMigration` — versioned migration spec: `apply(event)` transforms payload
+- `EventMigrator` — BFS migration chain discovery; `migrate(event, from, to)` applies
+  multi-step migration (v1.0 → v1.1 → v1.2 → v2.0); `can_migrate()` safety check
+- `ConsumerVersionGroup` — consumers grouped by schema version for fanout
+- `MultiVersionFanout` — delivers events to N consumer version groups using the correct
+  transformation per group: exact_match / forward_compatible / backward_compatible /
+  migrated; unresolvable paths surface `migration_failed` (not silent null delivery)
+
+The OpportunityUpdated schema evolution sequence:
+- v1.0 → v1.1: NEW_OPTIONAL_FIELD (`opportunity_score`, default=0.0) — backward+forward
+- v1.1 → v1.2: NEW_OPTIONAL_FIELD (`region`, default="UNKNOWN") — backward+forward
+- v1.2 → v2.0: FIELD_RENAMED (`amount`→`amount_usd`, `owner_id`→`rep_id`) — breaking
+
+Scenarios:
+- A: Backward compatible — v1.0 consumer reads v1.1 event; `opportunity_score` ignored
+  (v1.0 schema has no such field; no error)
+- B: Forward compatible — v1.1 consumer reads v1.0 event; `apply_defaults()` fills
+  `opportunity_score=0.0`
+- C: Breaking change — v1.0 event migrated to v2.0 via 3-step chain; `amount_usd` and
+  `rep_id` correctly renamed; v2.0 schema validation passes; `amount` and `owner_id`
+  not present in migrated payload
+- D: Multi-version fanout — producer at v1.2 delivers to consumers at v1.0 (exact_match
+  on payload, region stripped), v1.1 (backward_compatible), v1.2 (exact_match), v2.0
+  (migrated: amount→amount_usd, owner_id→rep_id)
+
+**`docs/implementation-note-08.md`** — "Schema Evolution in Enterprise Integration:
+How to Change Event Schemas Without Breaking Consumers":
+- Silent data corruption anatomy: how `amount`→`amount_usd` rename corrupts finance
+  records without any error or alert
+- The four evolution rules: fully compatible / forward-compatible-only / breaking
+- Major/minor version contract enforcement
+- Migration chain design: step-by-step vs. leap-of-faith
+- Multi-version fanout operational pattern: version group registry lifecycle
+- Schema validation as a required gate (not optional)
+- What to do when migration path does not exist
+
+Closes #30.
+
+---
+
 ## [0.8.0] — 2026-04-13
 
 ### Added — Backpressure and Retry Storm Prevention Example + Implementation Note
