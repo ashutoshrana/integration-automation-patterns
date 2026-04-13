@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.32.0] — 2026-04-13
+
+### Added — Observability Patterns (`32_observability_patterns.py`)
+
+Pure-Python observability primitives using only the standard library:
+
+- `MetricRegistry` — thread-safe counter/gauge store; `increment`, `gauge`, `get`, `snapshot` (copy), `reset`; 10-thread concurrency tested
+- `Histogram` — configurable bucket boundaries; `observe`, cumulative `buckets()`, `count`/`sum`/`mean`, `percentile(p)` via linear interpolation; raises `ValueError` for out-of-range p or empty histogram
+- `SpanTracer` — `@dataclass Span` with `duration_ms` property; auto-generated trace IDs (`uuid.uuid4`); thread-safe; `get_trace` ordered by start_time; `completed_spans` filter; `clear`
+- `HealthCheck` — `@dataclass CheckResult`; `register`/`run`/`run_all`/`is_healthy`/`summary`; exceptions in check functions caught and returned as unhealthy
+- `AlertRule` / `AlertManager` — `@dataclass Alert`; five condition types (`gt`/`lt`/`gte`/`lte`/`eq`); `AlertManager.evaluate_all` skips absent metrics; `fired_count` accumulates across calls
+
+91 new tests. Total: **1163 passed**.
+
+---
+
 ## [0.31.0] — 2026-04-13
 
 ### Added — RetryPolicy and public API foundation

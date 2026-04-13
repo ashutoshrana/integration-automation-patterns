@@ -1,6 +1,6 @@
 """Reference patterns for reliable enterprise integration and workflow automation."""
 
-__version__ = "0.31.0"
+__version__ = "0.32.0"
 
 from .azure_servicebus_envelope import AzureServiceBusEnvelope
 from .cdc_event import CDCEvent, CDCOperation, CDCSourceMetadata
