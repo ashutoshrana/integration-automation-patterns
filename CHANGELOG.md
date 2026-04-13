@@ -6,6 +6,28 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.1] — 2026-04-13
+
+### Added — CRM-ERP Sync Boundary Example and Implementation Note
+
+**`examples/04_crm_erp_sync_boundary.py`** — Runnable end-to-end demo of the `SyncBoundary`
+pattern applied to a Salesforce ↔ SAP S/4HANA account synchronization scenario:
+- Field authority map (SF owns segment/email, SAP owns billing/credit limit, legal name is shared)
+- Change detection distinguishing clean updates (one system changed) from true conflicts (both changed)
+- Three resolution strategies: authority-wins, last-writer-wins, manual-review
+- Shared fields (`legal_entity_name`, `vat_registration_number`) always escalate to manual review
+- `allow_system_b_override=True` surfacing unexpected writes from non-authoritative systems
+- Excluded fields (`sf_lead_score`, `sap_cost_center`) never touched by sync engine
+- Closes #5.
+
+**`docs/implementation-note-03.md`** — "Sync Boundaries in CRM-ERP Integration":
+why explicit field authority prevents data corruption in bi-directional sync.
+Covers the silent-overwrite failure mode, update-loop failure mode, last-sync-value
+conflict detection (vs naive timestamp comparison), and when each resolution
+strategy is appropriate.
+
+---
+
 ## [0.5.0] — 2026-04-13
 
 ### Added — Multi-Broker Envelope Adapters
