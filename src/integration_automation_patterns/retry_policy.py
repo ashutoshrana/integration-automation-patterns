@@ -10,7 +10,9 @@ from __future__ import annotations
 import logging
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 class RetryExhausted(Exception):
     """Raised when all retry attempts are exhausted."""
 
-    def __init__(self, attempts: int, last_error: Exception) -> None:
+    def __init__(self, attempts: int, last_error: BaseException) -> None:
         self.attempts = attempts
         self.last_error = last_error
         super().__init__(f"Exhausted {attempts} retry attempts: {last_error}")
@@ -40,7 +42,7 @@ class RetryPolicy:
     max_delay: float = 60.0  # seconds
     multiplier: float = 2.0
     jitter: bool = True
-    retryable_exceptions: tuple = (Exception,)
+    retryable_exceptions: tuple[type[BaseException], ...] = (Exception,)
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
@@ -59,12 +61,12 @@ class RetryPolicy:
             delay = random.uniform(0, delay)
         return delay
 
-    def execute(self, fn, *args, **kwargs):
+    def execute(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """
         Execute fn(*args, **kwargs) with retry on retryable_exceptions.
         Raises RetryExhausted if all attempts fail.
         """
-        last_error: Exception | None = None
+        last_error: BaseException = RuntimeError("no attempts made")
         for attempt in range(self.max_attempts):
             try:
                 return fn(*args, **kwargs)
