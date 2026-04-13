@@ -70,6 +70,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from typing import Any
 
@@ -674,7 +675,7 @@ class ParallelWorkflow:
                     name = future_to_name[future]
                     exc = future.exception()
                     results[name] = exc if exc is not None else future.result()
-            except TimeoutError:
+            except (TimeoutError, FuturesTimeoutError):
                 pass  # unfinished futures handled below
 
         # Fill in any tasks that did not complete within the timeout
