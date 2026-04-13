@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.33.0] — 2026-04-13
+
+### Added — Data Pipeline Patterns (`33_data_pipeline_patterns.py`)
+
+Five pure-Python data pipeline primitives using only the standard library:
+
+- `BatchProcessor` — fixed-size batching; `process`, `process_with_retry` (per-batch retry loop), thread-safe stats with `threading.Lock`
+- `StreamProcessor` — tumbling/sliding windows via `window_size`/`step_size`; `windows`, `process_stream`, `aggregate`
+- `ETLPipeline` — fluent builder (`.extract().transform().load()`); `run()`, `run_dry()` (skip load), `reset()`; `duration_ms` via `time.perf_counter()`
+- `DataLineage` — directed graph with `LineageNode`/`LineageEdge` dataclasses; `upstream`, `downstream`, BFS `lineage_path`, `to_dict` serialization
+- `DataQualityChecker` — named rule registry; `check`, `check_batch` (violation counts + failure rate), `valid_only`
+
+82 new tests. Total: **1218 passed**.
+
+---
+
 ## [0.32.0] — 2026-04-13
 
 ### Added — Observability Patterns (`32_observability_patterns.py`)
