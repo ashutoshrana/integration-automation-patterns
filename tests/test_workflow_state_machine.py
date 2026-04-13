@@ -600,8 +600,10 @@ class TestParallelWorkflow:
     def test_run_timeout_fills_remaining_tasks(self, mod):
         pw = mod.ParallelWorkflow()
         pw.add_task("fast", lambda ctx: "ok")
+        # 5s sleep exceeds any reasonable timeout; 0.5s timeout gives fast lambda
+        # room to complete on CI runners while keeping the test under 6s total
         pw.add_task("slow", lambda ctx: (time.sleep(5), "never")[1])
-        results = pw.run({}, timeout_seconds=0.1)
+        results = pw.run({}, timeout_seconds=0.5)
         # "fast" should complete; "slow" should be a TimeoutError
         assert results["fast"] == "ok"
         assert isinstance(results["slow"], TimeoutError)
