@@ -17,9 +17,7 @@ from pathlib import Path
 
 import pytest
 
-_MOD_PATH = (
-    Path(__file__).parent.parent / "examples" / "32_observability_patterns.py"
-)
+_MOD_PATH = Path(__file__).parent.parent / "examples" / "32_observability_patterns.py"
 
 
 def _load_module():
