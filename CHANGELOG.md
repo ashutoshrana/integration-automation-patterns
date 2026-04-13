@@ -6,6 +6,59 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-04-13
+
+### Added — Approval Workflow Example and Implementation Note
+
+**`examples/08_approval_workflow.py`** — multi-step approval workflow with SLA enforcement,
+escalation, and N-of-M quorum approval for enterprise procurement and contract management:
+
+New classes (self-contained in the example):
+- `ApprovalDecision` — immutable record of a single approver's decision: `approver_id`,
+  `outcome` (APPROVED/REJECTED/TIMED_OUT), `reason`, `decided_at`, `sla_deadline`, `sla_met`
+- `ApprovalGate` — single-approver gate with configurable `sla_hours` and `escalation_fn`;
+  `request_approval(context, decision_fn, now=None)` accepts an injectable clock for
+  deterministic SLA testing; calls `escalation_fn` immediately on timeout
+- `QuorumApprovalGate` — N-of-M approval gate; short-circuits to REJECTED when enough
+  rejections make quorum mathematically impossible; returns `(final_outcome, [ApprovalDecision])`
+  covering all approvers who responded within the SLA
+- `ApprovalWorkflow` — sequential saga orchestrator; adds gates via `add_step()` (fluent API);
+  `execute()` stops on first non-APPROVED outcome; returns a complete `ApprovalAuditRecord`
+- `ApprovalAuditRecord` — SOX/FAR-compliant audit record: `workflow_id`, `workflow_name`,
+  `context` snapshot, ordered `gate_decisions`, `final_outcome`, `total_sla_met`,
+  `initiated_at`, `completed_at`
+- `ApprovalOutcome` — APPROVED, REJECTED, TIMED_OUT
+
+Scenarios:
+- A: Happy path — 3-step sequential workflow (department_head → legal_review →
+  finance_approval); all approved within SLA; full audit record emitted
+- B: Step 2 rejection — legal_review rejects; workflow terminates immediately; only
+  2 gate decisions in audit record; finance step never executed
+- C: SLA timeout with escalation — manager_approval times out (clock injected past
+  48-hour deadline); `escalation_fn` fires immediately; timeout recorded as a decision
+  in the audit trail
+- D: 2-of-3 VP quorum — `QuorumApprovalGate` with quorum=2; VP-1 approves, VP-2 approves,
+  VP-3 abstains; quorum met; all three decision records captured; workflow proceeds
+
+**`docs/implementation-note-06.md`** — "Approval Workflows in Enterprise Integration:
+When Human Decision Is a First-Class Event":
+- Structural failure modes: stateless approval, timeout-as-afterthought, implicit quorum,
+  flat audit trail — and the design fix for each
+- Approval gate as a state machine: PENDING → APPROVED/REJECTED/TIMED_OUT; why escalation
+  must be co-located with the gate definition, not a cron job
+- Quorum short-circuit rule: early REJECTED when `(total - rejections) < quorum`
+- Sequential vs. quorum: decision matrix for when to use each
+- Integration with the saga pattern and transactional outbox: where approval fits in the
+  compensatable transaction chain
+- SOX Section 404 and FAR Subpart 15.4 requirements mapped to `ApprovalAuditRecord` fields
+- Deterministic-time injection for SLA testing (the `now=` parameter pattern)
+- What the pattern does not cover: persistent state across restarts, approval channel UI,
+  concurrent decisions from the same approver
+
+Closes #28.
+
+---
+
 ## [0.6.0] — 2026-04-13
 
 ### Added — CQRS + Event Sourcing Example and Implementation Note
