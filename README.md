@@ -1,6 +1,7 @@
 # integration-automation-patterns
 
 [![CI](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml/badge.svg)](https://github.com/ashutoshrana/integration-automation-patterns/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ashutoshrana/integration-automation-patterns/graph/badge.svg)](https://codecov.io/gh/ashutoshrana/integration-automation-patterns)
 [![PyPI](https://img.shields.io/pypi/v/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 [![Python](https://img.shields.io/pypi/pyversions/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
