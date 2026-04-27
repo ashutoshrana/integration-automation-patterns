@@ -17,8 +17,8 @@ jobs:
       - name: Welcome new contributor
         uses: actions/first-interaction@v3
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: |
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: |
             Thanks for opening your first issue here!
 
             To help us triage it quickly, please make sure you've filled out all sections of the issue template.
@@ -27,10 +27,10 @@ jobs:
             - [Documentation](./docs/)
             - [Contributing Guide](./CONTRIBUTING.md)
             - [Architecture Decisions](./docs/adr/)
-          pr-message: |
+          pr_message: |
             Thanks for your first pull request here!
 
             A maintainer will review it shortly. While you wait:
             - Make sure all CI checks pass
-            - Check that your PR title follows [Conventional Commits](https://www.conventionalcommits.org/) format (e.g. `feat: add idempotency handler for webhook events`)
+            - Check that your PR title follows [Conventional Commits](https://www.conventionalcommits.org/) format (e.g. `feat: add HIPAA policy enforcement rule`)
             - Ensure the PR description explains the problem and approach
