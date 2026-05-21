@@ -37,6 +37,7 @@ __all__ = ["EventReplayEngine", "ReplayResult", "ReplayFilter"]
 @dataclass
 class ReplayFilter:
     """Criteria for selecting events to replay."""
+
     since: datetime | None = None
     until: datetime | None = None
     event_types: list[str] | None = None
@@ -48,6 +49,7 @@ class ReplayFilter:
 @dataclass
 class ReplayResult:
     """Summary of one replay run."""
+
     replayed: int = 0
     skipped: int = 0
     failed: int = 0
@@ -117,7 +119,10 @@ class EventReplayEngine:
         result.duration_ms = (asyncio.get_event_loop().time() - t0) * 1000
         logger.info(
             "Replay complete: replayed=%d skipped=%d failed=%d duration_ms=%.1f",
-            result.replayed, result.skipped, result.failed, result.duration_ms,
+            result.replayed,
+            result.skipped,
+            result.failed,
+            result.duration_ms,
         )
         return result
 
@@ -128,9 +133,13 @@ class EventReplayEngine:
         max_events: int = 1000,
     ) -> ReplayResult:
         """Convenience method — replay events since a given UTC timestamp."""
-        return await self.replay(ReplayFilter(
-            since=since, event_types=event_types, max_events=max_events,
-        ))
+        return await self.replay(
+            ReplayFilter(
+                since=since,
+                event_types=event_types,
+                max_events=max_events,
+            )
+        )
 
     def idempotency_key(self, event: Any) -> str:
         """
@@ -146,10 +155,14 @@ class EventReplayEngine:
 
     async def _fetch(self, f: ReplayFilter) -> list[Any]:
         kwargs: dict[str, Any] = {"limit": f.max_events}
-        if f.since is not None: kwargs["since"] = f.since
-        if f.until is not None: kwargs["until"] = f.until
-        if f.event_types: kwargs["event_types"] = f.event_types
-        if f.correlation_ids: kwargs["correlation_ids"] = f.correlation_ids
+        if f.since is not None:
+            kwargs["since"] = f.since
+        if f.until is not None:
+            kwargs["until"] = f.until
+        if f.event_types:
+            kwargs["event_types"] = f.event_types
+        if f.correlation_ids:
+            kwargs["correlation_ids"] = f.correlation_ids
         kwargs["include_dead_letter"] = f.include_dead_letter
 
         get_pending = self._outbox.get_pending
@@ -185,14 +198,18 @@ class EventReplayEngine:
                             await loop.run_in_executor(None, lambda: mark(event))
                 else:
                     result.failed += 1
-                    result.errors.append({
-                        "event_id": getattr(event, "event_id", "unknown"),
-                        "reason": "publisher returned False",
-                    })
+                    result.errors.append(
+                        {
+                            "event_id": getattr(event, "event_id", "unknown"),
+                            "reason": "publisher returned False",
+                        }
+                    )
             except Exception as exc:
                 result.failed += 1
-                result.errors.append({
-                    "event_id": getattr(event, "event_id", "unknown"),
-                    "reason": str(exc),
-                })
+                result.errors.append(
+                    {
+                        "event_id": getattr(event, "event_id", "unknown"),
+                        "reason": str(exc),
+                    }
+                )
                 logger.warning("Replay failed for event %s: %s", getattr(event, "event_id", "?"), exc)
