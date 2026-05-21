@@ -1,11 +1,13 @@
 """Tests for EventReplayEngine."""
+
 from __future__ import annotations
-import asyncio
+
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import List
+from datetime import datetime
+
 import pytest
-from integration_automation_patterns.event_replay import EventReplayEngine, ReplayFilter
+
+from integration_automation_patterns.event_replay import EventReplayEngine
 
 
 @dataclass
@@ -21,14 +23,16 @@ class FakeEvent:
 
 
 class FakeOutbox:
-    def __init__(self, events: List[FakeEvent]):
+    def __init__(self, events: list[FakeEvent]):
         self._events = events
-        self.processed: List[str] = []
+        self.processed: list[str] = []
 
     def get_pending(self, since=None, until=None, event_types=None, limit=1000, **kwargs):
         evts = self._events
-        if since: evts = [e for e in evts if e.created_at >= since]
-        if event_types: evts = [e for e in evts if e.event_type in event_types]
+        if since:
+            evts = [e for e in evts if e.created_at >= since]
+        if event_types:
+            evts = [e for e in evts if e.event_type in event_types]
         return evts[:limit]
 
     def mark_processed(self, event: FakeEvent):
@@ -43,7 +47,7 @@ async def _fail_publisher(event) -> bool:
     return False
 
 
-def _make_events(n: int = 5) -> List[FakeEvent]:
+def _make_events(n: int = 5) -> list[FakeEvent]:
     return [FakeEvent(f"evt-{i}", "order.created", {"amount": i * 10}) for i in range(n)]
 
 
