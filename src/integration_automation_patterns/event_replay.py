@@ -24,9 +24,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,10 @@ __all__ = ["EventReplayEngine", "ReplayResult", "ReplayFilter"]
 @dataclass
 class ReplayFilter:
     """Criteria for selecting events to replay."""
-    since: Optional[datetime] = None
-    until: Optional[datetime] = None
-    event_types: Optional[List[str]] = None
-    correlation_ids: Optional[List[str]] = None
+    since: datetime | None = None
+    until: datetime | None = None
+    event_types: list[str] | None = None
+    correlation_ids: list[str] | None = None
     max_events: int = 1000
     include_dead_letter: bool = False
 
@@ -51,7 +52,7 @@ class ReplayResult:
     skipped: int = 0
     failed: int = 0
     dead_lettered: int = 0
-    errors: List[Dict[str, Any]] = field(default_factory=list)
+    errors: list[dict[str, Any]] = field(default_factory=list)
     duration_ms: float = 0.0
 
 
@@ -67,7 +68,7 @@ class EventReplayEngine:
     Args:
         outbox: Outbox instance with get_pending() and mark_processed() methods.
         publisher: Callable (sync or async) that publishes one event; returns True on success.
-        idempotency_store: Optional set or Redis-backed store of processed event hashes.
+        idempotency_store: Optional set of processed event hashes.
             Defaults to an in-memory set (resets on restart).
         concurrency: Events to process in parallel (default: 5).
 
@@ -87,15 +88,15 @@ class EventReplayEngine:
         self,
         outbox: Any,
         publisher: Callable[[Any], Any],
-        idempotency_store: Optional[Set[str]] = None,
+        idempotency_store: set[str] | None = None,
         concurrency: int = 5,
     ) -> None:
         self._outbox = outbox
         self._publisher = publisher
-        self._processed: Set[str] = idempotency_store if idempotency_store is not None else set()
+        self._processed: set[str] = idempotency_store if idempotency_store is not None else set()
         self._concurrency = concurrency
 
-    async def replay(self, filter_: Optional[ReplayFilter] = None) -> ReplayResult:
+    async def replay(self, filter_: ReplayFilter | None = None) -> ReplayResult:
         """
         Replay all events matching filter_.
 
@@ -123,7 +124,7 @@ class EventReplayEngine:
     async def replay_since(
         self,
         since: datetime,
-        event_types: Optional[List[str]] = None,
+        event_types: list[str] | None = None,
         max_events: int = 1000,
     ) -> ReplayResult:
         """Convenience method — replay events since a given UTC timestamp."""
@@ -135,8 +136,7 @@ class EventReplayEngine:
         """
         Content-addressable key for one event envelope.
 
-        SHA-256 of (event_id + event_type + stable payload repr) so that
-        re-delivered events with identical content produce the same key.
+        SHA-256 of (event_id + event_type + stable payload repr).
         """
         event_id = str(getattr(event, "event_id", "") or "")
         event_type = str(getattr(event, "event_type", "") or "")
@@ -144,8 +144,8 @@ class EventReplayEngine:
         payload_repr = str(sorted(payload.items())) if isinstance(payload, dict) else str(payload)
         return hashlib.sha256(f"{event_id}:{event_type}:{payload_repr}".encode()).hexdigest()
 
-    async def _fetch(self, f: ReplayFilter) -> List[Any]:
-        kwargs: Dict[str, Any] = {"limit": f.max_events}
+    async def _fetch(self, f: ReplayFilter) -> list[Any]:
+        kwargs: dict[str, Any] = {"limit": f.max_events}
         if f.since is not None: kwargs["since"] = f.since
         if f.until is not None: kwargs["until"] = f.until
         if f.event_types: kwargs["event_types"] = f.event_types
