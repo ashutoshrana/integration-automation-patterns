@@ -63,4 +63,8 @@ __all__ = [
     "WebhookSignatureError",
     "WebhookReplayError",
 ]
-from integration_automation_patterns.event_replay import EventReplayEngine, ReplayFilter, ReplayResult  # noqa: F401, E402
+from integration_automation_patterns.event_replay import (  # noqa: F401, E402
+    EventReplayEngine,
+    ReplayFilter,
+    ReplayResult,
+)
