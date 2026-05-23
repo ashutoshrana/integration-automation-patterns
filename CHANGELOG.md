@@ -6,6 +6,33 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.43.0] — 2026-05-23
+
+### Added — Holistic Enterprise Agentic AI Security Audit Framework (`43_agentic_security_auditor.py`)
+
+Seven-domain security audit for agentic AI deployments:
+
+- `AgenticSystemConfig` — configuration snapshot spanning Tool Permission, MCP Security, Identity & Authorization, Memory Security, Orchestration Safety, Observability, and Data Governance
+- `AgenticSecurityAuditor` — evaluates 28 controls and returns a scored `AgenticAuditReport` with maturity level (`INITIAL`→`OPTIMIZING`), per-domain breakdown, critical findings, and top-5 remediation actions
+- `AuditControl` — PASS/FAIL/SKIP/WARNING result with OWASP LLM / NIST AI 600-1 / EU AI Act citations
+- Regulatory references: OWASP LLM Top 10 2025 (LLM06, LLM08), NIST AI 600-1, EU AI Act Art. 9/10/14, ISO 42001 Cl.6.1, MCP Security Advisory CVE-2025-6514
+
+---
+
+## [0.42.0] — 2026-05-23
+
+### Added — Model Context Protocol (MCP) Security Validation Patterns (`42_mcp_security_patterns.py`)
+
+Five pure-Python (stdlib-only) MCP security primitives — no external dependencies:
+
+- `MCPToolDefinition` — dataclass with `compute_checksum()` (SHA-256 over name + description + sorted parameters) and `has_dangerous_permissions()` predicate covering `delete`, `external_call`, `write_all`, `admin`
+- `MCPSecurityValidator` — validates source allowlist, metadata for shell-metacharacter / prompt-injection patterns, permission subset against `ALLOWED_PERMISSIONS`, and SHA-256 checksum; guards against CVE-2025-6514 class manifest tampering
+- `MCPToolRegistry` — admit-on-all-pass registry: `register()` runs all four validations before storing; `list_tools()`, `get_tool()`, `unregister()`
+- `MCPRateLimiter` — sliding-window per-tool rate limiting: `check_rate_limit()` returns (allowed, remaining, reset_at); prevents runaway invocation storms
+- `MCPAuditLogger` — append-only invocation audit log: `log_invocation()`/`log_rejection()`, `get_tool_logs()`, `get_recent_logs(minutes)`; satisfies MCP invocation audit requirements
+
+---
+
 ## [0.41.0] — 2026-04-13
 
 ### Added — API Versioning and Contract Testing Patterns (`41_api_versioning_patterns.py`)
