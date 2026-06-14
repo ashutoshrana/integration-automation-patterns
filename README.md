@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reference patterns for reliable enterprise integration, workflow automation, and event-driven systems — 43 examples, 1,865 tests.**
+**Reliable enterprise integration patterns: event-driven workflows, system-of-record synchronisation, circuit breaker, saga orchestration, transactional outbox, CDC, and Kafka envelope handling — plus MCP Security Patterns for tool-invocation safety in agentic workflows. 43 examples, 1,865 tests.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -264,7 +264,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 
 | Library | Focus | Coverage |
 |---------|-------|---------|
-| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 50 sectors · 65 regulations · 1,901 tests |
+| [enterprise-rag-patterns](https://github.com/ashutoshrana/enterprise-rag-patterns) | What to retrieve | 50 sectors · 65+ regulations · 25 jurisdictions · 9 AI frameworks · 1,901 tests |
 | [regulated-ai-governance](https://github.com/ashutoshrana/regulated-ai-governance) | What agents may do | 41 governance examples · 25 jurisdictions · 2,631 tests |
 | **integration-automation-patterns** | How data flows | 43 patterns · schema registry · GraphQL · 1,865 tests |
 
