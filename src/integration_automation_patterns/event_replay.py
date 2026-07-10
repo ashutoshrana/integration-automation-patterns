@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -166,7 +167,7 @@ class EventReplayEngine:
         kwargs["include_dead_letter"] = f.include_dead_letter
 
         get_pending = self._outbox.get_pending
-        if asyncio.iscoroutinefunction(get_pending):
+        if inspect.iscoroutinefunction(get_pending):
             events = await get_pending(**kwargs)
         else:
             loop = asyncio.get_running_loop()
@@ -180,7 +181,7 @@ class EventReplayEngine:
                 result.skipped += 1
                 return
             try:
-                if asyncio.iscoroutinefunction(self._publisher):
+                if inspect.iscoroutinefunction(self._publisher):
                     success = await self._publisher(event)
                 else:
                     loop = asyncio.get_running_loop()
@@ -191,7 +192,7 @@ class EventReplayEngine:
                     result.replayed += 1
                     mark = getattr(self._outbox, "mark_processed", None)
                     if mark:
-                        if asyncio.iscoroutinefunction(mark):
+                        if inspect.iscoroutinefunction(mark):
                             await mark(event)
                         else:
                             loop = asyncio.get_running_loop()

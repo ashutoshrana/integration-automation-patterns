@@ -109,7 +109,7 @@ import random
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Optional
 
@@ -462,7 +462,7 @@ class HealthCheckAggregator:
             healthy_count=healthy,
             degraded_count=degraded,
             unhealthy_count=unhealthy,
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.now(timezone.utc),
         )
 
     def check_service(self, service_name: str) -> ServiceHealth:
@@ -500,7 +500,7 @@ class HealthCheckAggregator:
             service_name=service_name,
             status=status,
             latency_ms=latency_ms,
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
             error_message=error_msg,
         )
 
