@@ -328,7 +328,12 @@ subject; replay returns `created: false`, while reusing an ID with different dat
 fails. Manifest permissions must equal operator approval at startup. The audit
 callback records only the tool and decision; no token, subject or argument values.
 The supplied callback must be durable if your deployment requires durable audits;
-its failure blocks execution. Pre-authentication rejections are returned by the
+its acknowledgment failure before enqueue blocks execution. Async sinks and
+awaitable sink results are rejected. If the post-enqueue acknowledgment fails,
+`MCPAuditDeliveryError(event_committed=True)` reports that the event is already
+durable (the SDK includes this marker in the tool error). Retry only with the same
+request ID and payload to preserve deduplication; `event_committed=False` means
+this call did not enqueue. Pre-authentication rejections are returned by the
 SDK's HTTP layer. Configure issuer key rotation/revocation and HTTPS at deployment.
 
 `examples/42_mcp_security_patterns.py` remains an educational manifest-checking

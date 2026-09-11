@@ -92,3 +92,54 @@ async def test_sdk_http_auth_schema_and_replay(tmp_path):
             approved_permissions=frozenset({"events:write"}),
             declared_permissions=frozenset({"events:write", "admin"}),
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["async_function", "async_callable", "awaitable_result", "before", "after"])
+async def test_audit_acknowledgment_enforces_commit_boundary(tmp_path, monkeypatch, failure):
+    from mcp.server.auth.provider import AccessToken
+    from mcp.server.fastmcp.exceptions import ToolError
+
+    import integration_automation_patterns.mcp_server as module
+
+    verifier = JWTVerifier(
+        "unused for verified-token callback test",
+        "https://issuer.example",
+        "https://events.example/mcp",
+        {"alice": frozenset({"events:write"})},
+    )
+    store = SQLiteOutbox(tmp_path / "audit.db")
+    token = AccessToken(token="synthetic", client_id="client", subject="alice", scopes=["events:write"])
+    monkeypatch.setattr(module, "get_access_token", lambda: token)
+
+    async def async_sink(record):
+        pytest.fail("Unacknowledged coroutine must never run")
+
+    class AsyncSink:
+        async def __call__(self, record):
+            pytest.fail("Async callable must be rejected")
+
+    def sink(record):
+        if failure == "awaitable_result":
+            return async_sink(record)
+        if failure == "before" or record["decision"] == "created":
+            raise OSError("sensitive sink details must not reach the client")
+
+    configured_sink = (
+        async_sink if failure == "async_function" else AsyncSink() if failure == "async_callable" else sink
+    )
+    if failure in {"async_function", "async_callable"}:
+        with pytest.raises(TypeError, match="synchronously"):
+            create_mcp_server(store, verifier, configured_sink, approved_permissions=frozenset({"events:write"}))
+        assert store.pending() == []
+        return
+    server = create_mcp_server(store, verifier, configured_sink, approved_permissions=frozenset({"events:write"}))
+    args = {"request": {"request_id": "id1", "event_type": "test", "value": "synthetic"}}
+    with pytest.raises(ToolError, match=f"event_committed={failure == 'after'}") as error:
+        await server.call_tool("enqueue_event", args)
+    assert "sensitive sink details" not in str(error.value)
+    assert len(store.pending()) == int(failure == "after")
+    if failure == "after":
+        # The same request recovers after the lost post-commit acknowledgment.
+        await server.call_tool("enqueue_event", args)
+        assert len(store.pending()) == 1

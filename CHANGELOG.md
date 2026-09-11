@@ -8,6 +8,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- Reject unacknowledged async MCP audit sinks before enqueue; identify post-enqueue
+  audit failures with an explicit event-committed marker and safe same-ID replay.
+
 - Correct outbox documentation to at-least-once delivery; add durable SQLite producer
   transaction and consumer deduplication reference with crash/restart and two-worker tests.
 - Add optional authenticated MCP SDK v1 resource server, trusted RS256 issuer/audience

@@ -5,6 +5,7 @@ operator configuration, never values supplied in a tool invocation. Rotate keys
 by rebuilding the verifier. TLS termination is a deployment responsibility.
 """
 
+import inspect
 from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import urlparse
@@ -20,6 +21,14 @@ from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
 from .sqlite_outbox import SQLiteOutbox
+
+
+class MCPAuditDeliveryError(RuntimeError):
+    """Audit acknowledgment failed; event_committed identifies the enqueue boundary."""
+
+    def __init__(self, *, event_committed: bool) -> None:
+        self.event_committed = event_committed
+        super().__init__(f"Audit acknowledgment failed (event_committed={event_committed})")
 
 
 class StrictMetadata(FuncMetadata):
@@ -73,7 +82,7 @@ class JWTVerifier:
 def create_mcp_server(
     store: SQLiteOutbox,
     verifier: JWTVerifier,
-    audit_sink: Callable[[dict[str, str]], None],
+    audit_sink: Callable[[dict[str, str]], object],
     *,
     approved_permissions: frozenset[str],
     declared_permissions: frozenset[str] = frozenset({"events:write"}),
@@ -82,15 +91,28 @@ def create_mcp_server(
     if declared_permissions != approved_permissions or declared_permissions != frozenset({"events:write"}):
         raise ValueError("manifest permissions differ from operator approval")
 
+    if inspect.iscoroutinefunction(audit_sink) or inspect.iscoroutinefunction(getattr(audit_sink, "__call__", None)):
+        raise TypeError("Audit sinks must acknowledge synchronously")
+
+    def emit(decision: str, *, event_committed: bool = False) -> None:
+        try:
+            acknowledged = audit_sink({"tool": "enqueue_event", "decision": decision})
+            if inspect.isawaitable(acknowledged):
+                if inspect.iscoroutine(acknowledged):
+                    acknowledged.close()
+                raise TypeError("Audit sinks must acknowledge synchronously")
+        except Exception as exc:
+            raise MCPAuditDeliveryError(event_committed=event_committed) from exc
+
     def enqueue_event(request: EnqueueRequest) -> dict[str, bool]:
         token = get_access_token()
         if token is None or not token.subject or "events:write" not in token.scopes:
-            audit_sink({"tool": "enqueue_event", "decision": "denied"})
+            emit("denied")
             raise PermissionError("authenticated events:write permission required")
-        audit_sink({"tool": "enqueue_event", "decision": "authorized"})
+        emit("authorized")
         # Subject scopes idempotency keys so one user cannot suppress another's request.
         created = store.enqueue(f"{token.subject}:{request.request_id}", request.model_dump())
-        audit_sink({"tool": "enqueue_event", "decision": "created" if created else "replay"})
+        emit("created" if created else "replay", event_committed=True)
         return {"created": created}
 
     tool = Tool.from_function(enqueue_event)
