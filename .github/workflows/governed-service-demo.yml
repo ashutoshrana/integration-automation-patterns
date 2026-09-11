@@ -1,0 +1,24 @@
+name: Governed service demo
+on:
+  pull_request:
+  push:
+    branches: [main, codex/reliability-and-adoption-20260911]
+permissions:
+  contents: read
+jobs:
+  synthetic-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install tested source revisions and local telemetry SDK
+        run: |
+          python -m pip install -e '.[test]' opentelemetry-sdk==1.44.0 \
+            'enterprise-rag-patterns @ git+https://github.com/ashutoshrana/enterprise-rag-patterns.git@86899f0b67dcc5a1c959aae4d4cafd5b03db3992' \
+            'regulated-ai-governance @ git+https://github.com/ashutoshrana/regulated-ai-governance.git@2ec0a7a76a74a8162e70235bc530f07fe8d012e7' \
+            'confidence-escalation @ git+https://github.com/ashutoshrana/confidence-escalation.git@6a222914d047475079c4c4af43874b29cf1a18d3' \
+            'voice-ai-governance @ git+https://github.com/ashutoshrana/voice-ai-governance.git@984df0dba2f3f9cb6a63fdc745f37198831a6a82'
+      - name: Verify synthetic workflow and separate-process crash recovery
+        run: python -m pytest tests/test_governed_service_demo.py -q
