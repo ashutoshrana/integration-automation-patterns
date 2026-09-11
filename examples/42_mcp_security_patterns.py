@@ -1,5 +1,9 @@
 """
-42_mcp_security_patterns.py — Model Context Protocol (MCP) Security Validation Patterns
+42_mcp_security_patterns.py — Illustrative manifest checks, not MCP authentication.
+
+Use integration_automation_patterns.mcp_server for the authenticated SDK integration.
+Checksums detect changes only against an independently approved digest; they are
+not signatures and metadata pattern checks cannot establish tool safety.
 
 Pure-Python implementation of five MCP security primitives using only the standard
 library (``dataclasses``, ``hashlib``, ``time``, ``typing``).  No external dependencies
@@ -16,8 +20,8 @@ are required.
                 :meth:`compute_checksum` computes a deterministic SHA-256 of
                 the tool's identity — ``name + description + str(sorted(
                 parameters.items()))`` — and returns the hex digest.  The
-                checksum enables out-of-band verification: the server signs
-                the manifest; the client re-computes and compares.
+                checksum enables out-of-band verification: the operator approves
+                a digest independently; the client re-computes and compares.
                 :meth:`has_dangerous_permissions` returns ``True`` when the
                 tool's ``permissions`` list contains any entry from
                 :data:`DANGEROUS_PERMISSIONS` (``delete``, ``external_call``,
@@ -126,6 +130,7 @@ Run:
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -188,15 +193,14 @@ class MCPToolDefinition:
     def compute_checksum(self) -> str:
         """Compute a deterministic SHA-256 checksum of this tool's identity.
 
-        The checksum covers ``name``, ``description``, and
-        ``sorted(parameters.items())`` — the fields that define what the tool
-        does.  ``source`` and ``checksum`` are intentionally excluded so that
-        the same tool served from different mirrors produces the same hash.
-
-        Returns:
-            Lowercase hex SHA-256 digest string (64 characters).
+        Canonical JSON binds identity, nested schema, permissions and source.
+        The expected digest must come from trusted operator configuration.
         """
-        payload = self.name + self.description + str(sorted(self.parameters.items()))
+        payload = json.dumps(
+            {"name": self.name, "description": self.description,
+             "parameters": self.parameters, "permissions": sorted(set(self.permissions)),
+             "source": self.source}, sort_keys=True, separators=(",", ":"), allow_nan=False,
+        )
         return hashlib.sha256(payload.encode()).hexdigest()
 
     def has_dangerous_permissions(self) -> bool:

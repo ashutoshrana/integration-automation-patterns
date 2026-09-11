@@ -1,10 +1,12 @@
 """
 outbox.py — Transactional Outbox pattern for reliable event publishing.
 
-Ensures events are published exactly once even when the message broker is
+Supports at-least-once publishing even when the message broker is
 temporarily unavailable.  The application writes events to an outbox table in
 the same database transaction as the business operation, then a separate relay
-process polls the outbox and publishes to the broker.
+process polls the outbox and publishes to the broker. A crash after publishing
+before marking can redeliver: consumers must atomically deduplicate with their
+business write (see SQLiteOutbox).
 
 This module provides the data structures and processor logic.  Persistence of
 ``OutboxRecord`` objects is the caller's responsibility (typically a repository

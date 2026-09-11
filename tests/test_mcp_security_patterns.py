@@ -117,11 +117,18 @@ class TestMCPToolDefinition:
         tool2 = make_tool(mod, parameters={"b": "int", "a": "str"})
         assert tool1.compute_checksum() == tool2.compute_checksum()
 
-    def test_checksum_not_affected_by_source(self, mod):
-        """Source is excluded from checksum so mirrors produce the same hash."""
+    def test_checksum_binds_source(self, mod):
+        """Changing the source requires a new independently approved digest."""
         tool1 = make_tool(mod, source="https://server-a.internal")
         tool2 = make_tool(mod, source="https://server-b.internal")
-        assert tool1.compute_checksum() == tool2.compute_checksum()
+        assert tool1.compute_checksum() != tool2.compute_checksum()
+
+    def test_checksum_binds_permissions_and_nested_schema(self, mod):
+        original = make_tool(mod, parameters={"nested": {"type": "string", "maxLength": 5}})
+        reordered = make_tool(mod, parameters={"nested": {"maxLength": 5, "type": "string"}})
+        assert original.compute_checksum() == reordered.compute_checksum()
+        changed = make_tool(mod, parameters=original.parameters, permissions=["admin"])
+        assert original.compute_checksum() != changed.compute_checksum()
 
     # --- has_dangerous_permissions ---
 
