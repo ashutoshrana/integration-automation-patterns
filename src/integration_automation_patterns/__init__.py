@@ -12,6 +12,7 @@ from .outbox import AsyncOutboxProcessor, OutboxProcessor, OutboxRecord
 from .rabbitmq_envelope import RabbitMQEnvelope
 from .rate_limiter import RateLimitExceeded, SlidingWindowRateLimiter, TokenBucketRateLimiter
 from .saga import SagaOrchestrator, SagaResult, SagaStep
+from .sqlite_outbox import SQLiteOutbox
 from .sqs_envelope import SQSEventEnvelope
 from .sync_boundary import RecordAuthority, SyncBoundary, SyncConflict
 from .webhook_handler import WebhookEvent, WebhookHandler, WebhookReplayError, WebhookSignatureError
@@ -22,6 +23,7 @@ OutboxPublisher = OutboxProcessor
 __all__ = [
     # Version
     "__version__",
+    "SQLiteOutbox",
     # Event handling
     "DeliveryStatus",
     "EventEnvelope",

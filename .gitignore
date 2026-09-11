@@ -38,3 +38,9 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/

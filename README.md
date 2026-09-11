@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reliable enterprise integration patterns: event-driven workflows, system-of-record synchronisation, circuit breaker, saga orchestration, transactional outbox, CDC, and Kafka envelope handling — plus MCP Security Patterns for tool-invocation safety in agentic workflows. 43 examples, 1,865 tests.**
+**Reliable enterprise integration patterns: event-driven workflows, system-of-record synchronisation, circuit breaker, saga orchestration, transactional outbox, CDC, and Kafka envelope handling — plus MCP Security Patterns for tool-invocation safety in agentic workflows. See the example catalog below and CI for current test results.**
 
 Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
 
@@ -135,7 +135,7 @@ conflicts = boundary.detect_conflict(
 
 **Agentic & Runtime Security (2025–2026 Standards)**
 
-| 42 | `42_mcp_security_patterns.py` | MCP / Tool Security | MCPToolDefinition (immutable tool spec with SHA-256 checksum), MCPSecurityValidator (source allowlist + metadata + permission + checksum integrity), MCPToolRegistry (origin-allowlisted registration + duplicate detection), MCPInvocationGuard (pre-invocation policy enforcement + full audit trail), MCPRateLimiter (per-tool sliding-window rate limit) — guards against CVE-2025-6514 class MCP command injection, malicious MCP package supply-chain attack (Sept 2025), and unvetted tool composition |
+| 42 | `42_mcp_security_patterns.py` | MCP / Tool Security | MCPToolDefinition (mutable illustrative manifest with canonical SHA-256 checksum), MCPSecurityValidator (source allowlist + metadata + permission + checksum integrity), MCPToolRegistry (origin-allowlisted registration + duplicate detection), MCPInvocationGuard (pre-invocation policy enforcement + full audit trail), MCPRateLimiter (per-tool sliding-window rate limit) — illustrative local checks; not an authenticated MCP transport or a guarantee against prompt injection |
 | 43 | `43_agentic_security_auditor.py` | Enterprise Agentic Security Audit | Holistic agentic AI security gap-analysis framework — AgenticSystemConfig (25-field configuration across 7 domains), AgenticSecurityAuditor (28 controls: Tool Permission, MCP Security, Identity & Auth, Memory & Context, Multi-Agent, Observability, HITL; conditional SKIP for undeployed domains), AgentAuditReport (scored 0–100, Sandbox/Controlled/Trusted/Autonomous maturity), framework refs: OWASP ASI 2026, OWASP LLM 2025, NIST AI 600-1, MITRE ATLAS v5.1, CSA ATF, CVE-2025-6514, SOC 2, ISO 42001 |
 
 ---
@@ -273,3 +273,64 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Run `pytest tests/ -v` before opening
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+
+## Durable delivery and authenticated MCP
+
+`SQLiteOutbox` is a file-backed reference for **at-least-once delivery**. Write the
+business change and event through `enqueue(..., business_write=callback)` in one
+transaction. Relay `pending()` records, publish, then `mark_published(id)`. A crash
+between those last two operations can cause duplicate delivery. The consumer's
+`consume(id, payload, effect)` commits the inbox ID and the callback's database
+writes together; the callback must use the supplied connection. External API calls
+are not part of that transaction and still require downstream idempotency keys.
+SQLite serializes writers; this reference is intended for modest throughput.
+
+```python
+from integration_automation_patterns import SQLiteOutbox
+
+store = SQLiteOutbox("events.sqlite")
+store.enqueue("event-1", {"status": "ready"})
+for event_id, payload in store.pending():
+    broker_publish(event_id, payload)  # application-owned broker implementation
+    store.mark_published(event_id)
+# Consumer: effect(db, payload) must write using db, not an external API.
+store.consume(event_id, payload, effect)
+```
+
+Install `pip install 'integration-automation-patterns[mcp]'` for the real MCP SDK
+resource-server integration. The SDK v1 line is explicitly bounded (`>=1.30,<2`);
+this is not a v2 compatibility claim. Validated locally with MCP 1.30.0, PyJWT
+2.14.0 and Pydantic 2.13.5. Core users need no MCP dependencies.
+
+```python
+from integration_automation_patterns.mcp_server import JWTVerifier, create_mcp_server
+
+verifier = JWTVerifier(
+    public_key=trusted_public_key_pem,  # operator-configured issuer public key
+    issuer="https://identity.example",
+    audience="https://events.example/mcp",
+    grants={"authorized-user": frozenset({"events:write"})},
+)
+server = create_mcp_server(
+    store, verifier, audit_sink=write_redacted_audit,
+    approved_permissions=frozenset({"events:write"}),
+)
+app = server.streamable_http_app()  # serve with app lifespan and HTTPS termination
+```
+
+The server uses SDK authentication middleware and RS256 signature, issuer,
+audience and expiry verification. Effective scopes intersect token scopes with
+operator-configured user grants. The tool accepts only
+`{"request": {"request_id": "id-1", "event_type": "created", "value": "text"}}`.
+It rejects extra fields and non-string/nested values. IDs are scoped per verified
+subject; replay returns `created: false`, while reusing an ID with different data
+fails. Manifest permissions must equal operator approval at startup. The audit
+callback records only the tool and decision; no token, subject or argument values.
+The supplied callback must be durable if your deployment requires durable audits;
+its failure blocks execution. Pre-authentication rejections are returned by the
+SDK's HTTP layer. Configure issuer key rotation/revocation and HTTPS at deployment.
+
+`examples/42_mcp_security_patterns.py` remains an educational manifest-checking
+example, separate from this authenticated server. Its digest is not a signature;
+trusted expected digests must be supplied independently.
