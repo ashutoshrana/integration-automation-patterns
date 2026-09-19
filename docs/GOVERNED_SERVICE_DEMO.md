@@ -20,10 +20,10 @@ The [dedicated CI workflow](../.github/workflows/governed-service-demo.yml) inst
 
 | Dependency | Commit |
 |---|---|
-| enterprise-rag-patterns | `86899f0b67dcc5a1c959aae4d4cafd5b03db3992` |
-| regulated-ai-governance | `2ec0a7a76a74a8162e70235bc530f07fe8d012e7` |
-| confidence-escalation | `6a222914d047475079c4c4af43874b29cf1a18d3` |
-| voice-ai-governance | `984df0dba2f3f9cb6a63fdc745f37198831a6a82` |
+| enterprise-rag-patterns | `067d2f20d72aec8b3047c66ac59361745a0e9b77` |
+| regulated-ai-governance | `664a753aa46062d5e07b0e3a35f8fbf2367a4638` |
+| confidence-escalation | `59a9b95497d9a2f5ee3c67f633ad9bc8ff752f71` |
+| voice-ai-governance | `17f37396241ca3a97341cf55d8616b55aa2213c8` |
 
 The integration package is the current checkout. OpenTelemetry API/SDK 1.44.0 uses semantic-conventions package 0.65b0. This demo uses general trace/span IDs, parent relationships, names, and durations; it does not claim conformance to evolving GenAI semantic attributes. No prompts, model responses, entity values, or approval text are included in spans. For future GenAI attribute mapping, use the [official development conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/README.md) and pin the adopted schema. The local exporter is deliberately independent of that changing schema.
 
