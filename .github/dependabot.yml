@@ -6,6 +6,10 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    # The MCP adapter uses the v1 API; v2 requires a separately tested migration.
+    ignore:
+      - dependency-name: "mcp"
+        update-types: ["version-update:semver-major"]
     labels:
       - "type/dependencies"
     commit-message:

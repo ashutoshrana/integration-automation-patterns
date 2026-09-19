@@ -319,6 +319,11 @@ server = create_mcp_server(
 app = server.streamable_http_app()  # serve with app lifespan and HTTPS termination
 ```
 
+The adapter targets MCP SDK v1 (`>=1.30,<2`). Automated major-version updates
+are excluded because v2 removes v1 imports used by this adapter; v1 updates
+remain enabled. A v2 migration must port the adapter and pass the HTTP auth,
+strict-schema, replay and audit tests before widening the dependency range.
+
 The audience URL also configures the HTTP endpoint path (including nested paths).
 Its HTTPS origin configures browser-origin validation; credentials, query strings
 and fragments are rejected in resource URLs.
