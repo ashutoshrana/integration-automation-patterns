@@ -319,6 +319,10 @@ server = create_mcp_server(
 app = server.streamable_http_app()  # serve with app lifespan and HTTPS termination
 ```
 
+The audience URL also configures the HTTP endpoint path (including nested paths).
+Its HTTPS origin configures browser-origin validation; credentials, query strings
+and fragments are rejected in resource URLs.
+
 The server uses SDK authentication middleware and RS256 signature, issuer,
 audience and expiry verification. Effective scopes intersect token scopes with
 operator-configured user grants. The tool accepts only

@@ -49,6 +49,11 @@ class JWTVerifier:
     def __init__(self, public_key: str, issuer: str, audience: str, grants: Mapping[str, frozenset[str]]) -> None:
         if any(urlparse(url).scheme != "https" for url in (issuer, audience)):
             raise ValueError("issuer and resource must use HTTPS")
+        resource = urlparse(audience)
+        if not resource.hostname or resource.username is not None or resource.password is not None:
+            raise ValueError("resource must have a host and no embedded credentials")
+        if resource.query or resource.fragment:
+            raise ValueError("resource must not contain a query or fragment")
         self.public_key, self.issuer, self.audience = public_key, issuer, audience
         self.grants = dict(grants)
 
@@ -127,10 +132,11 @@ def create_mcp_server(
         token_verifier=verifier,
         stateless_http=True,
         json_response=True,
+        streamable_http_path=urlparse(verifier.audience).path or "/",
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
             allowed_hosts=[urlparse(verifier.audience).netloc],
-            allowed_origins=[verifier.audience.rsplit("/", 1)[0]],
+            allowed_origins=[f"https://{urlparse(verifier.audience).netloc}"],
         ),
         auth=AuthSettings(
             issuer_url=AnyHttpUrl(verifier.issuer),

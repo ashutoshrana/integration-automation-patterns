@@ -12,14 +12,15 @@ from integration_automation_patterns.sqlite_outbox import SQLiteOutbox
 
 
 @pytest.mark.asyncio
-async def test_sdk_http_auth_schema_and_replay(tmp_path):
+@pytest.mark.parametrize("resource_path", ["/mcp", "/api/events/mcp"])
+async def test_sdk_http_auth_schema_and_replay(tmp_path, resource_path):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public = (
         key.public_key()
         .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
         .decode()
     )
-    issuer, audience = "https://issuer.example", "https://events.example/mcp"
+    issuer, audience = "https://issuer.example", "https://events.example" + resource_path
     verifier = JWTVerifier(public, issuer, audience, {"alice": frozenset({"events:write"}), "bob": frozenset()})
     store, audits = SQLiteOutbox(tmp_path / "mcp.db"), []
     server = create_mcp_server(store, verifier, audits.append, approved_permissions=frozenset({"events:write"}))
@@ -42,12 +43,16 @@ async def test_sdk_http_auth_schema_and_replay(tmp_path):
             transport=httpx.ASGITransport(app=app), base_url="https://events.example"
         ) as client:
 
-            async def invoke(arguments, bearer=None):
-                headers = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-11-25"}
+            async def invoke(arguments, bearer=None, origin="https://events.example"):
+                headers = {
+                    "Accept": "application/json, text/event-stream",
+                    "MCP-Protocol-Version": "2025-11-25",
+                    "Origin": origin,
+                }
                 if bearer:
                     headers["Authorization"] = "Bearer " + bearer
                 return await client.post(
-                    "/mcp",
+                    resource_path,
                     headers=headers,
                     json={
                         "jsonrpc": "2.0",
@@ -66,6 +71,7 @@ async def test_sdk_http_auth_schema_and_replay(tmp_path):
             assert (await invoke(args, token(sub="unknown"))).status_code == 401
             assert (await invoke(args, token(exp=int(time.time()) - 10))).status_code == 401
             valid = token()
+            assert (await invoke(args, valid, origin="https://untrusted.example")).status_code == 403
             result = await invoke(args, valid)
             assert result.status_code == 200, result.text
             assert not result.json()["result"].get("isError"), result.text
@@ -143,3 +149,17 @@ async def test_audit_acknowledgment_enforces_commit_boundary(tmp_path, monkeypat
         # The same request recovers after the lost post-commit acknowledgment.
         await server.call_tool("enqueue_event", args)
         assert len(store.pending()) == 1
+
+
+@pytest.mark.parametrize(
+    "resource",
+    [
+        "https:///mcp",
+        "https://user:password@events.example/mcp",
+        "https://events.example/mcp?tenant=x",
+        "https://events.example/mcp#fragment",
+    ],
+)
+def test_invalid_resource_configuration(resource):
+    with pytest.raises(ValueError, match="resource"):
+        JWTVerifier("unused", "https://issuer.example", resource, {})
