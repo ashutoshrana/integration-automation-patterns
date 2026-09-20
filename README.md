@@ -7,15 +7,29 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/integration-automation-patterns.svg)](https://pypi.org/project/integration-automation-patterns/)
 
-**Reliable enterprise integration patterns: event-driven workflows, system-of-record synchronisation, circuit breaker, saga orchestration, transactional outbox, CDC, and Kafka envelope handling — plus MCP Security Patterns for tool-invocation safety in agentic workflows. See the example catalog below and CI for current test results.**
+Python building blocks and reference examples for integrations that must handle retries, duplicate events, partial failures and conflicting updates. The package includes event envelopes, synchronization boundaries, circuit breakers, sagas and a durable SQLite outbox, plus an optional authenticated MCP resource server.
 
-Structural solutions to the recurring failure modes of enterprise integration: duplicate event processing, partial transaction failures, silent data conflicts, and unrecoverable workflow state.
+For backend and platform engineers connecting business systems or building agent tools that enqueue work. You supply the application logic, credentials, broker connections and deployment.
+
+## Start here
+
+| Your task | Start with | Input → result |
+|---|---|---|
+| Prevent a replayed event from repeating a database change | [Runnable quick start](#quick-start) and [delivery guarantees](#durable-delivery-and-authenticated-mcp) | Event ID + payload + database callback → first processing returns `True`; an identical replay returns `False` |
+| Decide which system owns a changed field | [CRM/ERP synchronization example](examples/04_crm_erp_sync_boundary.py) | Field authority rules + incoming updates → conflict information for application handling |
+| Recover a workflow after a later step fails | [Saga compensation example](examples/03_saga_compensation.py) | Application steps + compensating callbacks → recorded workflow execution and compensation |
+| Let an authenticated agent enqueue work | [MCP setup](#durable-delivery-and-authenticated-mcp) | Verified identity + strict request → durable event or rejection |
+| See retrieval, review, execution and handoff together | [Combined demo guide](docs/GOVERNED_SERVICE_DEMO.md) and [executable](examples/governed_service_demo.py) | Synthetic requests → persisted approvals, local business effects, scrubbed handoff and local traces |
+
+The [portfolio guide](https://github.com/ashutoshrana/ashutoshrana/blob/main/PROJECT_GUIDE.md) explains how this package relates to the other libraries.
 
 ---
 
 ## The problem this solves
 
-Enterprise systems that span CRM + ERP + messaging fail in predictable ways. This library provides reference implementations of the patterns that solve these problems structurally — idempotent event envelopes, field-level authority boundaries, saga compensation, transactional outbox, event sourcing with optimistic concurrency, and API gateway composition — so integration logic is explicit, testable, and broker-agnostic.
+Use these patterns when delivery can repeat, workers can restart, or a workflow crosses independent systems. They make retry, ownership and recovery decisions explicit; they do not install a broker, synchronize a CRM automatically or make separate services share one transaction.
+
+For example, an order-ready event may arrive twice after a worker crashes. `SQLiteOutbox.consume` can record the event ID and write the local order effect in the same database transaction, so replay leaves one effect. If the effect is a payment or CRM API call, the remote service needs its own idempotency contract; the local transaction cannot roll that call back.
 
 ---
 
@@ -58,32 +72,30 @@ pip install 'integration-automation-patterns[pydantic]'
 
 ## Quick start
 
+This example uses a temporary SQLite database and makes no network calls. Its input is one event delivered twice; its output is one stored business effect.
+
 ```python
-from integration_automation_patterns.event_envelope import EventEnvelope
-from integration_automation_patterns.sync_boundary import SyncBoundary, FieldAuthority
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from integration_automation_patterns import SQLiteOutbox
 
-# Idempotent event — safe to process multiple times
-event = EventEnvelope(
-    event_id="evt_8f3a1b",
-    source="salesforce",
-    event_type="contact.updated",
-    payload={"email": "alice@example.com", "phone": "+1-555-0100"},
-    schema_version="1.0",
-)
+with TemporaryDirectory() as directory:
+    store = SQLiteOutbox(Path(directory) / "events.sqlite")
+    with store.connect() as db:
+        db.execute("CREATE TABLE effects (order_id TEXT)")
 
-# Field-level authority: who owns each field?
-boundary = SyncBoundary(
-    authorities={
-        "email": FieldAuthority(owner="salesforce", read_others=["erp"]),
-        "phone": FieldAuthority(owner="erp",        read_others=["salesforce"]),
-    }
-)
-conflicts = boundary.detect_conflict(
-    incoming_system="salesforce",
-    fields={"email": "alice@example.com", "phone": "+1-555-0100"},
-)
-# conflicts → {"phone": ConflictDetail(owner="erp", incoming_system="salesforce")}
+    def record_order(db, payload):
+        db.execute("INSERT INTO effects VALUES (?)", (payload["order_id"],))
+
+    payload = {"order_id": "order-1"}
+    print(store.consume("event-1", payload, record_order))  # True
+    print(store.consume("event-1", payload, record_order))  # False
+    with store.connect() as db:
+        print(db.execute("SELECT COUNT(*) FROM effects").fetchone()[0])  # 1
 ```
+
+Reusing an event ID with a different payload raises `ValueError`. Keep the database file outside a temporary directory to retain deduplication state across application restarts. The callback must use the supplied connection; external API calls are outside this guarantee. See the [outbox example](examples/02_transactional_outbox.py) for the publish/acknowledge boundary and the [combined demo](docs/GOVERNED_SERVICE_DEMO.md) for an actual subprocess crash and replay.
+
 
 ---
 
