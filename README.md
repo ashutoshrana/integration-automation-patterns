@@ -96,6 +96,12 @@ with TemporaryDirectory() as directory:
 
 Reusing an event ID with a different payload raises `ValueError`. Keep the database file outside a temporary directory to retain deduplication state across application restarts. The callback must use the supplied connection; external API calls are outside this guarantee. See the [outbox example](examples/02_transactional_outbox.py) for the publish/acknowledge boundary and the [combined demo](docs/GOVERNED_SERVICE_DEMO.md) for an actual subprocess crash and replay.
 
+Run the [failure-contract harness](docs/FAILURE_CONTRACT.md) to reproduce process
+crashes, lost HTTP acknowledgments, replay with and without downstream idempotency,
+confirmed lock contention, a direct-SQL baseline and backlog allocation. It uses
+local synthetic services and reports source hashes and measured counts; timings
+are local observations, not a production capacity guarantee.
+
 
 ---
 
