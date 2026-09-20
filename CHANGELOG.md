@@ -6,6 +6,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.44.2] — 2026-09-20
+
+- Add a stdlib failure-contract harness for process crashes, replay, remote commit/lost response, confirmed SQLite lock contention and backlog allocation.
+- Compare the helper with direct SQL under matching transaction settings; report source hashes and actual runtime separately from installed metadata.
+- Include executable examples and guides in source distributions.
+
 ## [0.44.1] — 2026-09-19
 
 - Align the MCP HTTP endpoint and browser origin with the configured resource URL,
