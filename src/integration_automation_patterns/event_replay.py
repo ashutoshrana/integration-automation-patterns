@@ -166,10 +166,13 @@ class EventReplayEngine:
         t0 = asyncio.get_event_loop().time()
 
         events = await self._fetch(filter_)
-        await asyncio.gather(
+        outcomes = await asyncio.gather(
             *(self._process(event, result, sem) for event in events),
             return_exceptions=True,
         )
+        for outcome in outcomes:
+            if isinstance(outcome, BaseException):
+                raise outcome
 
         result.duration_ms = (asyncio.get_event_loop().time() - t0) * 1000
         logger.info(

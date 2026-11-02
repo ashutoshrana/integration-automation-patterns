@@ -7,15 +7,15 @@ This guide walks from installation to running a reliable enterprise integration 
 ## 1. Install
 
 ```bash
-pip install integration-automation-patterns
+pip install 'integration-automation-patterns>=0.46.0'
 ```
 
 Optional extras:
 
 ```bash
-pip install 'integration-automation-patterns[kafka]'   # KafkaEventEnvelope
-pip install 'integration-automation-patterns[fastapi]' # FastAPI webhook router
-pip install 'integration-automation-patterns[pydantic]' # Pydantic v2 validation
+pip install 'integration-automation-patterns[kafka]>=0.46.0'   # KafkaEventEnvelope
+pip install 'integration-automation-patterns[fastapi]>=0.46.0' # FastAPI webhook router
+pip install 'integration-automation-patterns[pydantic]>=0.46.0' # Pydantic v2 validation
 ```
 
 ---

@@ -38,7 +38,7 @@ Usage::
 
 Installation::
 
-    pip install 'integration-automation-patterns[fastapi]'
+    pip install 'integration-automation-patterns[fastapi]>=0.46.0'
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def _check_fastapi_available() -> None:
     except ImportError as exc:
         raise ImportError(
             "fastapi is required for WebhookRouter. "
-            "Install it with: pip install 'integration-automation-patterns[fastapi]'"
+            "Install it with: pip install 'integration-automation-patterns[fastapi]>=0.46.0'"
         ) from exc
 
 

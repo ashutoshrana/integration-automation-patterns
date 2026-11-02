@@ -1,2 +1,3 @@
 recursive-include examples *.py
 recursive-include docs *.md
+include ci/release-build-requirements.txt

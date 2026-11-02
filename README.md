@@ -56,17 +56,36 @@ EventEnvelope (event_id, idempotency_key, source, schema_version)
 
 ## Installation
 
+Installer examples keep the security-qualified package floor. If that release is not yet available on PyPI, use the reviewed checkout or wheel; do not drop the floor to make pip select an older distribution.
+
+Use a maintained Python 3.11+ runtime for production. Python 3.10 core compatibility remains available as legacy support.
+
 ```bash
-pip install integration-automation-patterns
+pip install 'integration-automation-patterns>=0.46.0'
 ```
 
 Optional extras:
 
 ```bash
-pip install 'integration-automation-patterns[kafka]'
-pip install 'integration-automation-patterns[fastapi]'
-pip install 'integration-automation-patterns[pydantic]'
+pip install 'integration-automation-patterns[kafka]>=0.46.0'
+pip install 'integration-automation-patterns[fastapi]>=0.46.0'
+pip install 'integration-automation-patterns[pydantic]>=0.46.0'
 ```
+
+### Optional dependency support
+
+The 2026-11-02 qualification resolves/audits minimum and current graphs on Python 3.11, plus current graphs on Python 3.14. Native API checks have their own cells; the 3.14 core lane does not establish all SDKs' native behavior there. Lock and rescan the deployment graph; this snapshot does not cover every historical or future resolver choice.
+
+| Extra | Qualified dependency floor | Dependency Python floor |
+|---|---|---|
+| `kafka` | kafka-python 2.3.2 | project core 3.10 |
+| `fastapi` | FastAPI 0.133.0, Starlette 1.3.1, HTTPX 0.27.1 | 3.10 |
+| `pydantic` | Pydantic 2.12.0 | project core 3.10 |
+| `mcp` | MCP 1.30.0 `<2`, PyJWT 2.15.0 `<3` | 3.10 |
+| `test` / `dev` | pytest 9.0.3, pytest-asyncio 1.3.0; other listed tools | 3.10 |
+| `all` | retained runtime extras above | 3.10 |
+
+Earlier FastAPI floors constrain Starlette below its patched branch; earlier JWT and Kafka floors also admit known advisories. The new floors retain compatible APIs and are qualified with real local HTTP/auth and envelope contracts. MCP remains the declared SDK v1 integration, not a claim of 2026-07-28 protocol conformance.
 
 ---
 
@@ -316,7 +335,7 @@ for event_id, payload in store.pending():
 store.consume(event_id, payload, effect)
 ```
 
-Install `pip install 'integration-automation-patterns[mcp]'` for the real MCP SDK
+Install `pip install 'integration-automation-patterns[mcp]>=0.46.0'` for the real MCP SDK
 resource-server integration. The SDK v1 line is explicitly bounded (`>=1.30,<2`);
 this is not a v2 compatibility claim. Validated locally with MCP 1.30.0, PyJWT
 2.14.0 and Pydantic 2.13.5. Core users need no MCP dependencies.
@@ -396,3 +415,5 @@ Delivery remains at least once; consumers must deduplicate business effects in t
 own transaction. SQLite coordinates runners using the same supported local database
 file; this does not establish distributed filesystem or broker exactly-once semantics.
 Transaction behavior follows the [SQLite transaction reference](https://sqlite.org/lang_transaction.html).
+
+Individual publisher cancellation propagates from `EventReplayEngine.replay()`; it is not returned as a clean zero-failure summary. A cancelled durable claim can be retried. Cancellation cannot undo an external effect already started; downstream idempotency and bounded publication I/O remain required.

@@ -286,3 +286,48 @@ async def test_legacy_external_set_prevents_republication():
     assert (result.skipped, result.failed) == (1, 0)
     assert engine.idempotency_key(event) in markers
     assert outbox.processed == [event.event_id]
+
+
+@pytest.mark.asyncio
+async def test_child_publisher_cancellation_propagates_and_claim_can_retry(tmp_path):
+    import asyncio
+
+    from integration_automation_patterns.event_replay import SQLiteReplayStore
+
+    event = _make_events(1)[0]
+    outbox = FakeOutbox([event])
+    store = SQLiteReplayStore(tmp_path / "cancel.sqlite")
+
+    async def cancelled(event):
+        raise asyncio.CancelledError("publisher cancelled")
+
+    with pytest.raises(asyncio.CancelledError):
+        await EventReplayEngine(outbox, cancelled, store).replay()
+    assert outbox.processed == []
+    result = await EventReplayEngine(outbox, _ok_publisher, store).replay()
+    assert (result.replayed, result.failed) == (1, 0)
+    assert outbox.processed == [event.event_id]
+
+
+@pytest.mark.asyncio
+async def test_outer_replay_cancellation_propagates_without_ack(tmp_path):
+    import asyncio
+
+    from integration_automation_patterns.event_replay import SQLiteReplayStore
+
+    started = asyncio.Event()
+    outbox = FakeOutbox(_make_events(1))
+    store = SQLiteReplayStore(tmp_path / "outer-cancel.sqlite")
+
+    async def blocked(event):
+        started.set()
+        await asyncio.Event().wait()
+        return True
+
+    task = asyncio.create_task(EventReplayEngine(outbox, blocked, store).replay())
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert outbox.processed == []
+    assert (await EventReplayEngine(outbox, _ok_publisher, store).replay()).replayed == 1
