@@ -1,4 +1,5 @@
 """Execute documented API examples and resolve links in the implementation notes."""
+
 from __future__ import annotations
 
 import ast
@@ -9,8 +10,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS = [*sorted((ROOT / "docs").glob("implementation-note-*.md")),
-        ROOT / "docs/agentic-security-trends-2026.md"]
+DOCS = [*sorted((ROOT / "docs").glob("implementation-note-*.md")), ROOT / "docs/agentic-security-trends-2026.md"]
 
 
 def blocks(name):
@@ -75,8 +75,9 @@ def test_cqrs_note_rejects_a_stale_version():
     make_event = namespace["_make_event"]
     for version in range(4):
         store.append("opp", [make_event("stage", "opp", version, {})], version - 1)
-    namespace.update(store=store, opp_id="opp", reconstruct=lambda events: events,
-                     other_event=make_event("stage", "opp", 4, {}))
+    namespace.update(
+        store=store, opp_id="opp", reconstruct=lambda events: events, other_event=make_event("stage", "opp", 4, {})
+    )
     with pytest.raises(namespace["ConcurrencyConflictError"]):
         exec(blocks("implementation-note-05.md")[1], namespace)
     assert store.current_version("opp") == 4
@@ -87,8 +88,7 @@ def test_documented_replay_wiring_uses_dedicated_store(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
     monkeypatch.chdir(tmp_path)
-    namespace = {"outbox": SimpleNamespace(get_pending=lambda **kwargs: []),
-                 "publisher": lambda event: True}
+    namespace = {"outbox": SimpleNamespace(get_pending=lambda **kwargs: []), "publisher": lambda event: True}
     exec(blocks("implementation-note-04.md")[-1], namespace)
     result = asyncio.run(namespace["engine"].replay())
     assert result.failed == 0

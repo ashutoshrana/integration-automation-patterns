@@ -20,3 +20,4 @@
 | Fresh release staging fails strict artifact validation | `uv build` inserts a `.gitignore` beside the distributions, which strict release checks and broad Twine inputs reject | Use the CI `python -m build` command and retain exactly one wheel and one sdist in publication staging |
 
 | Published notes call nonexistent APIs or imply crash-safe recovery | Conceptual snippets and workflow enum names were treated as current package APIs; in-memory examples were described as durable | Execute documented constructors, deadline and concurrency examples; resolve local anchors and referenced classes; distinguish optional SQLite replay markers, acknowledgment failures and the remaining at-least-once crash window |
+| New documentation checks pass lint locally but fail hosted formatting | Local and CI formatter versions produce different layouts | Reproduce the exact formatter version shown in CI, format the changed test, and rerun the documentation checks |
