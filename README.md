@@ -370,7 +370,7 @@ trusted expected digests must be supplied independently.
 
 ### Durable event replay
 
-`EventReplayEngine` accepts `SQLiteReplayStore` as its optional `idempotency_store`:
+Since 0.45.0, `EventReplayEngine` accepts `SQLiteReplayStore` as its optional `idempotency_store`:
 
 ```python
 from integration_automation_patterns.event_replay import EventReplayEngine, SQLiteReplayStore

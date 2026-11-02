@@ -17,3 +17,4 @@
 
 | Concurrent replay duplicates publication and failed acknowledgments never recover | Check/publish lacked a shared claim and success was counted before the acknowledgment; restart lost volatile markers | Serialize per-engine claims or opt into a dedicated SQLite replay store, persist publication before retryable acknowledgment, retain legacy marker reads and test independent runners plus crash redelivery |
 | Release workflow uses an advisory-affected or mutable publishing action | A dependency update in one repository left equivalent release workflows unchanged | Pin every publishing workflow to the verified patched action commit and validate each workflow before release |
+| Fresh release staging fails strict artifact validation | `uv build` inserts a `.gitignore` beside the distributions, which strict release checks and broad Twine inputs reject | Use the CI `python -m build` command and retain exactly one wheel and one sdist in publication staging |
