@@ -7,7 +7,7 @@ This example composes five libraries with a fake model, synthetic records, and a
 With the five repositories checked out as siblings at the revisions below, run this single shell command from `integration-automation-patterns`:
 
 ```sh
-python3 -m venv .venv-demo && .venv-demo/bin/python -m pip install -e '.[test]' -e ../enterprise-rag-patterns -e ../regulated-ai-governance -e ../confidence-escalation -e ../voice-ai-governance opentelemetry-sdk==1.44.0 && .venv-demo/bin/python examples/governed_service_demo.py
+python3 -m venv .venv-demo && .venv-demo/bin/python -m pip install -e '.[test]' -e ../enterprise-rag-patterns -e ../regulated-ai-governance -e ../confidence-escalation -e ../voice-ai-governance opentelemetry-sdk==1.45.1 && .venv-demo/bin/python examples/governed_service_demo.py
 ```
 
 Dependency installation requires network access; the demo itself uses only local files and processes. Python 3.10+ is required by the integration library. Tested locally on Python 3.14.4; the dedicated CI job uses Python 3.12. To repeat after installation, run only `.venv-demo/bin/python examples/governed_service_demo.py`.

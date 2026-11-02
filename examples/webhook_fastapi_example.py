@@ -16,7 +16,7 @@ Key capabilities shown:
   4. Structured result handling (is_valid / is_duplicate / payload)
 
 Installation:
-    pip install integration-automation-patterns
+    pip install 'integration-automation-patterns>=0.46.0'
 
 Production imports (replace stubs below):
     from fastapi import FastAPI, Request, Response
