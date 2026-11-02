@@ -21,7 +21,8 @@ window_start = floor(event_time / W) * W
 window_end   = window_start + W
 ```
 
-**Guarantee:** No event is counted twice. The total event count across all windows equals the total number of events in the stream.
+**Assignment property:** Each delivery is assigned to one window. Redelivery still
+counts twice unless deduplicated, and late-arrival policies can drop deliveries.
 
 **Ideal for:** Periodic reporting — per-minute order counts, hourly revenue roll-ups, 5-minute billing intervals. Any metric where "no double-counting" is a correctness requirement.
 
@@ -29,14 +30,17 @@ window_end   = window_start + W
 
 ### 2. Sliding Windows (overlapping)
 
-A sliding window of size W advancing every S milliseconds assigns each event to floor(W/S) windows (or fewer near stream boundaries):
+A sliding window of size W advancing every S milliseconds assigns each event to
+the aligned windows containing its timestamp:
 
 ```
 windows containing event_time T:
     { [k*S, k*S + W) | k*S ≤ T < k*S + W }
 ```
 
-**Guarantee:** Each event appears in exactly `ceil(W/S)` windows. Events at the boundaries of bursts appear in fewer windows.
+**Assignment property:** Counts can alternate between `floor(W/S)` and `ceil(W/S)`
+when W is not divisible by S. The example clamps starts at zero, so timestamps near
+zero can appear in fewer windows. Burst boundaries do not change membership.
 
 **Ideal for:** Smoothed rate metrics — "rolling 60-second API call count computed every 15 seconds." The overlap smooths out the aliasing artifact of tumbling windows.
 
@@ -99,11 +103,14 @@ The `WindowAggregator` computes aggregations in a single pass over the events in
 
 ### Exactly-once vs. at-least-once
 
-The `StreamProcessor` in this module is a reference implementation assuming at-least-once event delivery (the default for Kafka, AWS Kinesis, Google Pub/Sub). For exactly-once semantics:
+The `StreamProcessor` in this module is a reference implementation assuming at-least-once event delivery (the default for Kafka, AWS Kinesis, Google Pub/Sub). For duplicate suppression within an accumulator (not an exactly-once guarantee):
 
 1. Assign an `event_id` to every event and track it in the window accumulator.
 2. On duplicate delivery, check whether the event_id already exists in the accumulator before adding.
-3. The `StreamEvent.event_id` field supports this — it is a UUID that producers must assign at message creation, not at ingestion.
+3. Supply a stable `StreamEvent.event_id` at production time and preserve it on replay.
+
+Durable deduplication, window state, output publication and source acknowledgment
+need coordinated recovery. The example's in-memory windows do not provide that.
 
 ### State management in distributed processors
 
@@ -117,6 +124,6 @@ The watermark model assumes that `allowed_lateness_ms` captures the maximum obse
 
 ## Related Patterns in This Repository
 
-- **[01_event_envelope_retry.py](../examples/01_event_envelope_retry.py)** — EventEnvelope with event_time and idempotency key; the natural input type for the StreamProcessor.
+- **[01_event_envelope_retry.py](../examples/01_event_envelope_retry.py)** — EventEnvelope with a stable event ID and creation time. Convert explicitly to `StreamEvent`; `EventEnvelope` has no `event_time` field.
 - **[02_transactional_outbox.py](../examples/02_transactional_outbox.py)** — At-least-once delivery from the database outbox; produces the late-arrival distribution that the watermark must account for.
 - **[10_schema_evolution.py](../examples/10_schema_evolution.py)** — Schema versioning for events consumed by sliding/session windows; window accumulators must tolerate schema evolution across their lifetime.

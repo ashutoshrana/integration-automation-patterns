@@ -1,5 +1,10 @@
 # Implementation Note 03 — Sync Boundaries in CRM-ERP Integration
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`src/integration_automation_patterns/sync_boundary.py`](../src/integration_automation_patterns/sync_boundary.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 **Series:** integration-automation-patterns  
 **Topic:** Why explicit field authority prevents data corruption in bi-directional sync  
 **Status:** Published 2026-04-12
@@ -46,8 +51,7 @@ The common failure modes:
 The root cause is that field authority is implicit. Everyone on the integration
 team knows that "finance owns billing address" and "sales owns the segment," but
 this knowledge lives in heads, Confluence pages, or comments in sync scripts.
-It is not encoded in a form that is testable, auditable, or enforceable at
-runtime.
+It is not encoded in a form that is testable or inspectable at runtime.
 
 When a new developer joins and writes a new sync flow, they may not know that
 SAP is authoritative for payment terms. The field gets synced in the wrong
@@ -58,6 +62,8 @@ Making authority explicit — in a data structure, not documentation — solves
 this at the source:
 
 ```python
+from integration_automation_patterns import RecordAuthority, SyncBoundary
+
 ACCOUNT_BOUNDARY = SyncBoundary(
     record_type="account",
     system_a_id="salesforce",
@@ -73,8 +79,8 @@ ACCOUNT_BOUNDARY = SyncBoundary(
 )
 ```
 
-This is the contract. It is code-reviewable, version-controlled, and enforced
-by `detect_conflict()` at runtime.
+This is the contract. It is code-reviewable and version-controlled. `detect_conflict()` reports differences;
+the caller must enforce write direction, select a winner and persist review work.
 
 ---
 
@@ -109,12 +115,16 @@ SAP.payment_terms = "NET45"   # SAP also updated — TRUE CONFLICT
 `SyncBoundary.detect_conflict()` implements this correctly:
 
 ```python
+# Internal logic excerpt (inside detect_conflict):
 if last_sync_value is not None:
     a_changed = value_a != last_sync_value
     b_changed = value_b != last_sync_value
     if not (a_changed and b_changed):
         return None  # only one system changed — not a conflict
 ```
+
+When `last_sync_value=None`, the API cannot distinguish an unknown baseline from a
+previous null value and reports any unequal synced values as a conflict.
 
 This requires storing the last-sync-value per field. That is additional state
 to manage, but it prevents false conflicts (which cause unnecessary escalations)
@@ -134,7 +144,8 @@ Use when:
 - The owning system's users understand that their value is canonical
 - Losing a non-owning-system change is acceptable and expected
 
-This is the default for all fields with `SYSTEM_A` or `SYSTEM_B` authority.
+This is a caller-side resolution policy for fields with `SYSTEM_A` or `SYSTEM_B`
+authority; `SyncBoundary` does not execute it.
 
 ### 2. Last-writer-wins
 
@@ -197,20 +208,16 @@ Both make the "do not sync this field" intent testable.
 
 ## The allow_system_b_override flag
 
-By default, if a non-authoritative system changes an owned field, the change
-is simply overwritten on next sync with no notification. SAP changes the
-primary email (owned by SF): on next sync, SF's value overwrites SAP's. The
-SAP admin who made the change has no idea their change was discarded.
+A caller implementing authority-wins might overwrite a non-owner's edit on its next
+sync. If the application needs visibility into discarded edits, it must explicitly
+record them and route them for review.
 
-With `allow_system_b_override=True`, changes by the non-authoritative system
-to owned fields are detected and queued for review rather than silently
-discarded. This does not mean they are applied — the owning system's value
-still wins. But the change is visible, and the integration team can investigate
-why SAP is updating email addresses that it does not own.
+`allow_system_b_override` records configuration intent. `detect_conflict()` does not
+read this flag, queue a review, resolve the conflict or apply a write. The integrating
+application must implement those behaviors and its review queue explicitly.
 
-This is valuable during early integration rollout when data stewardship
-boundaries are still being established. It surfaces unexpected write patterns
-before they cause data quality problems.
+An implemented review path can help during early rollout when data stewardship
+boundaries are still being established. The flag alone does not surface writes.
 
 ---
 

@@ -1,15 +1,24 @@
 # Implementation Note 11 — Distributed Cache Patterns: When Adding a Cache Makes Things Harder
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`examples/13_distributed_cache_patterns.py`](../examples/13_distributed_cache_patterns.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 ## Overview
+
+Despite its name, `DistributedLockManager` uses an in-process dictionary and thread
+lock. `CacheInvalidationBus` also runs in process. They demonstrate local behavior;
+sharing a lock or invalidation across nodes requires an external implementation.
 
 Every engineer knows that caching is one of the two hard problems in computer science.
 The other is cache invalidation — and that's only the start of the list. This note
-covers the five categories of distributed cache failures that `13_distributed_cache_patterns.py`
+covers the categories of distributed cache failures that `13_distributed_cache_patterns.py`
 addresses, and explains the design decisions behind each pattern.
 
 ---
 
-## The Five Failures Caching Introduces
+## The Cache Failures Covered Here
 
 ### 1. Cache Stampede (Thundering Herd)
 
@@ -27,7 +36,7 @@ and populates the cache. All other concurrent requests either:
 **TTL jitter prevents synchronized expiry:** `TTLInvalidationStrategy.compute_ttl_ms()`
 adds random jitter (default ±20%) to every TTL. If 1,000 keys are populated at the
 same time, they expire over a 40% window rather than all at once. This is the cheapest
-stampede prevention available — a two-line change that eliminates an entire failure mode.
+stampede prevention available — a way to spread expiry times; it does not eliminate stampedes for an individual key.
 
 ```python
 # Without jitter: 1000 keys all expire at T+30s
@@ -47,18 +56,18 @@ match your consistency requirements:
 
 | Strategy | Write Latency | Read Freshness | Durability Risk |
 |----------|--------------|----------------|-----------------|
-| Write-Through | cache + store | Always fresh | None |
+| Write-Through | cache + store | Depends on write completion and invalidation | Partial-write failure |
 | Write-Behind | cache only (fast) | Fresh (cache) | Loss on crash |
-| Cache-Aside | store only (write path uncached) | Stale until TTL | None |
+| Cache-Aside | store only (write path uncached) | Stale until invalidation/TTL | Depends on backing store |
 
 **Write-Through** (`WriteThroughCache`): Every `put()` synchronously updates both
-cache and store. Reads are always consistent. Appropriate for transactional data
+cache and store. The two writes are not atomic; failures and concurrent writers still need recovery. Appropriate for transactional data
 (orders, payments) where stale reads are unacceptable and write latency is tolerable.
 
 **Write-Behind** (`WriteBehindCache`): Writes update the cache immediately and are
 buffered in a `dict` (in this reference; a durable queue in production). The store
-is updated asynchronously via `flush()`. Write throughput is dramatically higher —
-the caller's write completes in microseconds rather than waiting for the database.
+is updated asynchronously via `flush()`. Buffering avoids a backing-store write on each call; the example does not establish
+a production throughput or latency improvement.
 
 **The durability risk of write-behind is real.** If the cache node fails between a
 write and the next flush, the buffered data is lost. Production implementations
@@ -89,8 +98,8 @@ Node C: receives event → delete locally (eviction_count += 1)
 ```
 
 `InvalidatingCache.invalidate_and_publish()` is the single method that combines
-local eviction and bus publication. This ensures the two operations always happen
-together — there's no code path that publishes without evicting locally or vice versa.
+local eviction and bus publication. This sequences the two operations in one method; it does not make eviction and
+publication atomic or recover a failed publication.
 
 **Source node filtering:** A node does not apply events it published itself
 (`if event.source_node_id == self.node_id: return`). This prevents a node from
@@ -98,7 +107,7 @@ receiving its own publication and unnecessarily clearing a key it just set.
 
 **Production transports:**
 - **Redis Pub/Sub**: simple, at-most-once delivery; suitable for non-critical invalidations
-- **Kafka**: durable, exactly-once; suitable for critical consistency requirements
+- **Kafka**: durable transport with configuration-dependent delivery semantics; consumers still need replay handling
 - **Redis Streams + consumer groups**: durable, supports consumer acknowledgment
 
 ---
@@ -123,9 +132,8 @@ keys = strategy.get_dependent_keys("user:1001")
 # → {"user:1001:orders", "user:1001:cart", "user:1001:orders:summary"}
 ```
 
-The graph traversal handles cycles via a `visited` set (not present in this simplified
-graph, which assumes no cycles — in practice, circular dependencies indicate a design
-problem and should be caught at registration time).
+The implementation's visited set prevents infinite traversal through cycles.
+Registration does not reject cycles; validate the intended dependency model separately.
 
 ---
 
@@ -146,8 +154,7 @@ The lock holder must pass its token sequence when writing to the backing store. 
 seen sequence for that lock key.
 
 ```python
-token = lock_mgr.acquire("record:500", holder_id="w1")  # sequence=1
-# ... time passes, lock expires ...
+token = lock_mgr.acquire("record:500", holder_id="w1", ttl_ms=0)  # immediately expired (demo)
 token2 = lock_mgr.acquire("record:500", holder_id="w2")  # sequence=2
 
 # Worker A resumes and tries to write with stale token
@@ -205,6 +212,6 @@ against startup time.
 
 - Kleppmann, M. *Designing Data-Intensive Applications* (2017) — Ch. 8 (distributed locks, fencing tokens)
 - Redis documentation — Redlock algorithm, Pub/Sub, Streams
-- Garrod, M. *Building Microservices* (2022) — Ch. 14 (cache strategies)
+- Sam Newman, *Building Microservices*, 2nd ed. (2021) — distributed service design
 - AWS ElastiCache best practices — thundering herd prevention, write-behind with SQS
 - Facebook engineering blog — Memcached at scale (lease-based stampede prevention)
