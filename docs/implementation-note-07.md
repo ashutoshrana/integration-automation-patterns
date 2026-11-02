@@ -2,7 +2,7 @@
 
 **Repo:** `integration-automation-patterns`
 **Relates to:** [`examples/09_backpressure_retry.py`](../examples/09_backpressure_retry.py)
-**ADR cross-reference:** [ADR-001 (idempotency key design)](adr/001-idempotency-key-design.md), [ADR-002 (saga boundaries)](adr/002-saga-boundaries.md)
+**ADR cross-reference:** [ADR-001 (idempotency key design)](adr/001-idempotency-key-design.md), [ADR-003 (saga choreography vs. orchestration)](adr/003-saga-choreography-vs-orchestration.md)
 
 ---
 
@@ -64,7 +64,7 @@ With 100 consumers and cap=16s:
 
 Each subsequent attempt spreads wider. The downstream receives a smooth, manageable request rate that allows gradual recovery rather than repeated full-load waves.
 
-**The practical implication:** Jitter is not a nice-to-have. It is the mechanism that converts "retry storm" into "graceful recovery." A pipeline without jitter is a pipeline that will eventually destroy its downstream.
+**The practical implication:** Jitter is not a nice-to-have. It is the mechanism that converts "retry storm" into "graceful recovery." Jitter reduces synchronized retries; it still needs attempt budgets, timeouts and capacity limits.
 
 ---
 
@@ -139,7 +139,7 @@ The approval workflow and CQRS patterns in this repo address what happens when e
 
 **Before the saga step:** The consumer applies the retry strategy and backpressure check. If the step eventually succeeds (after retries), the saga proceeds normally. The retry history is available if the saga orchestrator needs to log degraded performance.
 
-**If the event reaches dead-letter:** The saga receives no completion signal. The saga's timeout fires. The saga executes its compensation chain (reversal of all completed steps). The dead-letter event is the audit artifact explaining why the saga was compensated.
+**If the event reaches dead-letter:** The saga receives no completion signal. A production coordinator must detect the missing completion and schedule compensation. The in-memory retry example does not implement a durable saga timer. The dead-letter event is the audit artifact explaining why the saga was compensated.
 
 **What this means for saga timeout design:** The saga timeout must be longer than `(max_retries × max_backoff) + recovery_time`. If the retry strategy uses a cap of 32 seconds and max 4 attempts, the worst-case retry time is ~128 seconds. The saga timeout should be at least 3–5 minutes to avoid compensating sagas that are legitimately recovering.
 

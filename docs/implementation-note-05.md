@@ -1,5 +1,10 @@
 # Implementation Note 05 — CQRS in Enterprise Integration: When to Separate Reads from Writes
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`examples/07_cqrs_event_sourcing.py`](../examples/07_cqrs_event_sourcing.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 **Repo:** `integration-automation-patterns`
 **Relates to:** [`examples/07_cqrs_event_sourcing.py`](../examples/07_cqrs_event_sourcing.py)
 **ADR cross-reference:** [ADR-003 (orchestration vs. integration boundaries)](adr/003-orchestration-vs-integration-boundaries.md)
@@ -40,7 +45,7 @@ This unlocks capabilities that are impossible with mutable state:
 
 2. **Causal replay** — when a bug is found in state computation logic, fix the projection code and replay all events to get the correct state. No data migration required.
 
-3. **Audit by construction** — the event log is the audit trail. You do not need a separate `_audit_log` table; the events themselves are the immutable record of every change.
+3. **Audit input** — retained events can reconstruct changes. The example's in-memory store does not establish immutability, retention or tamper evidence; production audit storage needs separate controls.
 
 4. **Multiple projections from one log** — the same event stream can be projected into different read models optimized for different query patterns: a stage-funnel projection, an owner-performance projection, a regional-revenue projection — all from the same append-only event log.
 
@@ -65,7 +70,9 @@ The `EventStore.append(aggregate_id, events, expected_version)` contract handles
 ```python
 # Thread A reads current state at version 3, prepares an update
 state = reconstruct(store.get_events(opp_id))  # version 3
-events = [StageUpdated(opp_id, version=4, new_stage="Negotiation")]
+events = [DomainEvent(event_id="stage-change-4", event_type="opportunity.stage_updated",
+                      aggregate_id=opp_id, aggregate_version=4,
+                      payload={"new_stage": "Negotiation"})]
 
 # Thread B also reads version 3 and submits first
 store.append(opp_id, [other_event], expected_version=3)  # succeeds → now at version 4
@@ -86,13 +93,13 @@ This is the safe default for single-user workflows. For workflows with concurren
 
 ---
 
-## Read model rebuild: the zero-data-loss guarantee
+## Read model rebuild from retained events
 
 The event log is the system of truth. The read model is a cache. Caches can be invalidated.
 
-`OpportunityProjection.rebuild(all_events)` drops all current read model state and replays the full event log from the beginning. The resulting state is always identical to the state that would have been accumulated by processing events one by one.
+`OpportunityProjection.rebuild(all_events)` drops all current read model state and replays the full event log from the beginning. Given the same complete ordered history and deterministic projection logic, the resulting state should match incremental processing.
 
-This guarantee enables several operational patterns that are otherwise very expensive:
+This property enables several operational patterns that are otherwise very expensive:
 
 - **Schema migration:** add a new field to the read model (e.g., `days_in_stage` derived from stage transition timestamps). Rebuild the projection and the new field is populated historically.
 - **Bug fix:** if the projection code had a bug that computed `total_pipeline_value` incorrectly, fix the code and rebuild. Historical data is corrected automatically.

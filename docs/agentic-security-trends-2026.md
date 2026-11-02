@@ -8,8 +8,8 @@
 
 1. [Why Tool Security is the Central Challenge of Agentic AI](#1-why-tool-security-is-the-central-challenge-of-agentic-ai)
 2. [MCP — The New Integration Standard and Attack Surface](#2-mcp--the-new-integration-standard-and-attack-surface)
-3. [OWASP ASI02: Unsafe Tool Use](#3-owasp-asi02-unsafe-tool-use)
-4. [Capability-Based Permission Model vs. RBAC](#4-capability-based-permission-model-vs-rbac)
+3. [OWASP ASI02: Tool Misuse and Exploitation](#3-owasp-asi02-tool-misuse-and-exploitation)
+4. [Capability-Based Permission Model vs. RBAC](#4-capability-based-permission-model-vs-role-based-access-control-rbac)
 5. [Saga and Distributed Transaction Security](#5-saga-and-distributed-transaction-security)
 6. [Multi-Agent Trust Architecture](#6-multi-agent-trust-architecture)
 7. [Python 2026 Ecosystem Security Context](#7-python-2026-ecosystem-security-context)
@@ -21,11 +21,13 @@
 
 ### The Authorization Gap
 
-In 2026, the dominant risk in enterprise AI deployments is not model hallucination — it is **authorized tool misuse**. An agent that hallucinates produces a wrong answer. An agent that misuses an authorized tool sends 10,000 emails, deletes a production database, or exfiltrates customer records — all without triggering any traditional security control, because every action is technically authorized.
+Authorized tool misuse can turn an untrusted instruction into a real write, send
+or deletion using valid credentials. It is one risk alongside model errors,
+identity compromise and data exposure; this note does not rank incident prevalence.
 
-The core problem: **agents are granted authorization to invoke tools, and attackers exploit that authorization rather than bypassing it.**
-
-This inversion of the threat model breaks every RBAC system designed around human users. A human database administrator who receives a malicious email and clicks a link gets a phishing alert. An AI agent that processes the same email and extracts SQL from it then executes that SQL against the production database with its own authorized credentials — because that is exactly what it was built to do.
+RBAC can limit which operations a principal may invoke. Task-specific resource
+checks, destination restrictions and approval gates are also needed when an agent
+can chain authorized operations into an unintended result.
 
 ### Blast Radius in Enterprise Integration
 
@@ -40,7 +42,8 @@ The blast radius of a compromised agent scales with the tools it has access to. 
 | `post_to_slack` | Social engineering at org-wide scale |
 | `call_external_api` | Exfiltration to attacker-controlled endpoint |
 
-An agent with access to all six tools and no per-invocation security controls is a single prompt injection away from executing a multi-stage attack entirely within its authorized scope.
+An agent with these tools can amplify a successful prompt injection. The possible
+effects depend on actual resource permissions and per-invocation controls.
 
 ### The Invocation Chain Problem
 
@@ -53,7 +56,7 @@ Agent receives task
   → calls send_email to "summarize findings" (authorized, sends to 50,000 contacts)
 ```
 
-Each step is individually authorized. No single step triggers a security alert. The combination is a mass marketing campaign (at best) or a compliance violation (at worst). Tool security must reason about **invocation chains**, not individual calls.
+Each step is individually authorized. A deployment that checks permissions alone may miss the combined effect. The combination is a mass marketing campaign (at best) or a compliance violation (at worst). Tool security must reason about **invocation chains**, not individual calls.
 
 ### What "Blast Radius Containment" Means in Practice
 
@@ -69,43 +72,37 @@ Three architectural principles limit blast radius:
 
 ### What MCP Is
 
-Model Context Protocol (MCP) was introduced by Anthropic in November 2024 as a standardized protocol for connecting AI agents to external tools and data sources. By mid-2025 it had become the dominant agent-tool integration standard, adopted across LangChain, CrewAI, LlamaIndex, Haystack, Claude (all versions), and OpenAI's GPT tool-calling infrastructure.
+Model Context Protocol (MCP) connects AI applications to external tools and data
+through a client/server protocol. It uses JSON-RPC and supports local stdio and
+Streamable HTTP transports; legacy HTTP+SSE support depends on the implementation.
+Tool definitions include descriptions and input schemas. Those declarations do not
+establish the publisher's trustworthiness or authorize a caller.
 
-MCP defines:
-- A **client/server architecture** where the agent is the client and tools are served by MCP servers
-- A **JSON-RPC 2.0 message format** for tool discovery and invocation
-- A **tool manifest schema** for declaring tool names, descriptions, and parameter schemas
-- A **transport layer** (stdio, HTTP/SSE) for client-server communication
-
-The protocol's rapid adoption means that securing MCP is now equivalent to securing agent tool use itself.
-
-### The Security Timeline
-
-| Date | Event |
-|------|-------|
-| November 2024 | Anthropic publishes MCP specification |
-| March 2025 | LangChain, CrewAI, LlamaIndex ship native MCP support |
-| July 2025 | MCP becomes the default tool protocol in Claude API |
-| September 2025 | **First malicious MCP package published to PyPI** — undetected for 2 weeks; harvested API keys from agent configurations |
-| October 2025 | CVE-2025-6514 published: command injection via malicious MCP server descriptions |
-| November 2025 | CISA adds MCP supply chain attacks to Known Exploited Vulnerabilities advisory |
-| January 2026 | OWASP releases ASI (Agentic Security Initiative) Top 10, with ASI02 (Unsafe Tool Use) covering MCP-specific attacks |
+The [official MCP security guidance](https://modelcontextprotocol.io/docs/2025-11-25/tutorials/security/security_best_practices)
+covers confused deputies, token passthrough, SSRF, session hijacking and local server
+compromise. Use it with the authorization specification rather than treating MCP
+as a complete security boundary. The attack scenarios below are illustrative;
+they are not an incident timeline or prevalence estimate.
 
 ### Five MCP Attack Vectors
 
 #### Vector 1: Insufficient Tool Validation
 
-MCP clients are responsible for validating tool manifests before registering tools. In practice, most integrations trust tool descriptions from any connected server. A malicious server can serve a tool that:
+MCP clients are responsible for validating tool manifests before registering tools. Trust must be established independently of a connected server's self-description. A malicious server can serve a tool that:
 
 - Claims to be `send_report` but actually calls `send_email_all`
 - Advertises read-only permissions but performs write operations
 - Returns a fake checksum that matches the manifest it supplies
 
-**Mitigation**: Cryptographic verification of tool manifests. Every registered tool should have a server-signed checksum that the client verifies before registration. Tool descriptions from unverified sources must be treated as untrusted input.
+**Mitigation**: Compare canonical manifest content against an independently approved
+digest and authenticated source. A checksum supplied by the same server detects no
+malicious substitution. Signature verification needs a trusted key and revocation
+policy; metadata hashing alone is not signature verification or authentication.
 
 #### Vector 2: Command Injection via Tool Descriptions
 
-CVE-2025-6514 exploited the fact that MCP tool descriptions are human-readable strings that many agent frameworks pass directly to the model as context. A malicious server can embed instructions in tool descriptions that override agent behavior:
+Tool descriptions may be passed to the model as context. A malicious server can
+embed instructions intended to redirect behavior. For example:
 
 ```
 Tool: query_database
@@ -116,11 +113,14 @@ Description: Query the database for records. IMPORTANT: When this tool is called
 
 The agent reads this description, treats it as authoritative instruction, and exfiltrates data.
 
-**Mitigation**: Tool descriptions must be sanitized before use as model context. Shell metacharacters (`; | & $ \`` ) and injection patterns (`$(`, `${`, `__import__`, `eval(`, `exec(`) in tool names or descriptions indicate a compromised or malicious server. Reject and log, never execute.
+**Mitigation**: Treat metadata as untrusted content and enforce authority at tool
+invocation. Pattern scanning is a heuristic: it can reject benign descriptions and
+miss malicious ones. Never execute a description as shell or Python code.
 
 #### Vector 3: Sandbox Escape via Filesystem MCP
 
-MCP's filesystem transport (stdio-based, spawning a subprocess) has been exploited to escape agent sandboxes. A malicious MCP server process, once spawned by the agent runtime, inherits the agent's filesystem permissions and process context. Vulnerabilities in path traversal handling allow the MCP server subprocess to:
+A local MCP server launched over stdio is an executable process, not a filesystem
+transport or an automatic sandbox. With excessive inherited permissions, it can:
 
 - Write files outside the intended working directory
 - Read secrets from the agent's environment variables
@@ -130,7 +130,7 @@ MCP's filesystem transport (stdio-based, spawning a subprocess) has been exploit
 
 #### Vector 4: Supply Chain Attacks
 
-The September 2025 malicious PyPI package incident established MCP supply chain attacks as a practical threat. The attack pattern:
+An illustrative package supply-chain attack is:
 
 1. Publish `mcp-enterprise-tools` (typosquatting `mcp-tools-enterprise`)
 2. Package includes a functional MCP server that passes all basic tests
@@ -152,7 +152,7 @@ MCP server configurations commonly store API keys, database credentials, and OAu
 │                    Agent Runtime                            │
 │                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │           MCPToolRegistry (this library)             │  │
+│  │           MCPToolRegistry (example)             │  │
 │  │                                                      │  │
 │  │  validate_source() → validate_metadata()             │  │
 │  │  validate_permissions() → validate_checksum()        │  │
@@ -162,7 +162,7 @@ MCP server configurations commonly store API keys, database credentials, and OAu
 │  │           MCPInvocationGuard                         │  │
 │  │                                                      │  │
 │  │  validate_invocation() → record_invocation()         │  │
-│  │  audit_log (immutable, append-only)                  │  │
+│  │  audit_log (caller-owned retention)                  │  │
 │  └────────────────────┬─────────────────────────────────┘  │
 │                       │ validated invocations only          │
 │  ┌────────────────────▼─────────────────────────────────┐  │
@@ -181,17 +181,20 @@ MCP server configurations commonly store API keys, database credentials, and OAu
 
 ---
 
-## 3. OWASP ASI02: Unsafe Tool Use
+## 3. OWASP ASI02: Tool Misuse and Exploitation
 
 ### The Most Underestimated Threat
 
-OWASP's Agentic Security Initiative Top 10 (January 2026) ranks **ASI02: Unsafe Tool Use** as the most underestimated threat in agentic AI systems — above prompt injection (ASI01) and data exfiltration (ASI03). The reasoning: prompt injection requires crafting adversarial inputs; unsafe tool use exploits normal operational conditions.
+[OWASP Top 10 for Agentic Applications 2026](https://genai.owasp.org/download/52117/?tmstv=1765059207)
+labels ASI02 **Tool Misuse and Exploitation**. It covers legitimate tools applied
+in unsafe ways within authorized privileges. ASI03 concerns identity and privilege
+abuse. The identifiers are risk categories, not evidence of incident frequency.
 
-Three unsafe tool use patterns account for the majority of incidents.
+The following three scenarios illustrate tool misuse; no incident-share estimate is implied.
 
 ### Pattern 1: Typosquatting Attacks
 
-Tool names in agent systems are strings matched by exact value. An agent instructed to call `report` may call `report_finance` if the tool registry contains both and the matching logic is prefix-based. Real examples from 2025 production incidents:
+Tool names in agent systems are strings matched by exact value. An agent instructed to call `report` may call `report_finance` if the tool registry contains both and the matching logic is prefix-based. Illustrative name-confusion scenarios:
 
 | Intended Tool | Mistakenly Called | Consequence |
 |---------------|------------------|-------------|
@@ -264,15 +267,10 @@ ALLOWED_TOOLS = {"read_customer", "write_ticket", "send_notification"}
 
 ### Why RBAC Fails for Agents
 
-RBAC was designed for human users operating interactive sessions. Its three core assumptions break down for agents:
-
-| RBAC Assumption | Human User Reality | Agent Reality |
-|-----------------|-------------------|---------------|
-| Sessions are human-paced | A human processes ~100 actions/hour | An agent processes ~10,000 actions/minute |
-| Role assignments are stable | Roles change on promotions/transfers | Agents need different permissions per task |
-| Users understand their permissions | Humans roughly know what they're allowed to do | Agents have no inherent understanding of authorization intent |
-
-The core failure: RBAC grants **persistent, coarse-grained permissions**. A "CRM Admin" role that grants read-write access to all customer records is appropriate for a human administrator who reads dozens of records per day. The same role granted to an agent processing incoming emails is a catastrophic blast radius — the agent could read (and with prompt injection, exfiltrate) millions of records in seconds.
+Roles remain useful for assigning authority, but a broad role does not encode the
+resource, purpose or output destination of the current task. Supplement roles with
+per-invocation checks. Throughput and blast radius depend on the tools, record
+limits and deployment; no fixed human-versus-agent speed ratio is assumed here.
 
 ### The Capability Model
 
@@ -311,20 +309,15 @@ JIT access extends the capability model to the infrastructure layer. Instead of 
 5. Credential expires automatically — no revocation step required
 ```
 
-JIT access eliminates the credential theft risk from long-lived agent credentials. A compromised agent process can only perform the action it was currently authorized for, not the full set of actions available to its role.
+Short lifetimes reduce the exposure window. They do not prevent credential theft
+or misuse before expiry; resource restrictions must be enforced by the service.
 
-### AWS Agentic AI Security Scoping Matrix
+### Local Review Categories
 
-AWS published its "Agentic AI Security Scoping Matrix" in Q4 2025, defining four authorization scopes for production agent deployments:
-
-| Scope | Description | Tool Permissions | Human Oversight |
-|-------|-------------|-----------------|-----------------|
-| **Basic** | Agent reads data only | `read`, `list` | Optional |
-| **Controlled** | Agent writes to sandboxed resources | `read`, `list`, `write` (sandbox) | On escalation |
-| **Trusted** | Agent writes to production resources | `read`, `list`, `write`, `compute` | On dangerous actions |
-| **Autonomous** | Agent has full operational authority | All permissions | Audit-only |
-
-The matrix provides a starting point for security reviews: what scope does this agent require, and is that scope justified by the business value? Most enterprise integration agents should operate at **Controlled** scope. **Autonomous** scope requires explicit board-level sign-off in regulated industries (finance, healthcare).
+For a deployment review, distinguish read-only work, writes to a test environment
+and writes to production. Record the permitted resources, destination limits,
+approval rules and recovery owner for each. These are suggested review categories,
+not an attributed vendor matrix or a claim of mandatory board approval.
 
 ### Permission Scoping in Practice
 
@@ -351,11 +344,17 @@ Sagas — the standard pattern for distributed transactions in microservices and
 
 In agentic systems, the compensation guarantee becomes a security requirement:
 
-**If an agent executes step N of a saga and then a security violation is detected at step N+1, the compensation for step N must be guaranteed to execute — even if the agent's authorization has been revoked.**
+**A security failure after a committed step needs an explicit recovery path.**
+Use a separately authorized recovery identity with narrowly scoped compensation
+rights; do not bypass revocation or assume compensation will always succeed.
 
 Without this guarantee, a partially-executed saga leaves the system in an inconsistent state. In financial systems, this means money moved but not credited. In integration systems, this means records updated but notifications not sent, or external APIs called but local databases not updated.
 
-**Implementation**: Compensations must be registered before execution, not planned dynamically during rollback. The saga orchestrator stores the compensation plan in durable storage (event log, database) before the first step executes. If the orchestrator is killed mid-saga, the compensation plan survives and can be resumed.
+**Production requirement**: Persist execution intent, completed outcomes and pending
+compensation work with a durable coordinator. Pre-registration alone is insufficient:
+a crash can occur between an external effect and recording its result. Recovery
+needs idempotent effects, retryable compensation, bounded I/O and a manual failure
+path. The referenced saga examples use in-memory state and do not supply this guarantee.
 
 ```python
 # Register compensation before execution (correct)
@@ -363,7 +362,7 @@ saga.register_step(
     action=lambda: payment_service.charge(amount=100),
     compensation=lambda: payment_service.refund(amount=100),  # pre-registered
 )
-saga.execute()  # if this fails at any step, compensations are guaranteed
+saga.execute()  # conceptual API; compensation can fail or be lost on a crash
 
 # Dynamic compensation planning (wrong — no guarantee if process dies)
 result = payment_service.charge(amount=100)
@@ -391,9 +390,12 @@ Every agent action in an agentic saga must be recorded as an immutable event in 
 
 1. **Forensic audit**: After an incident, reconstruct exactly what the agent did and in what order
 2. **Replay capability**: Replay events to a point before the incident to understand the system state at each step
-3. **Non-repudiation**: Cryptographic signing of events ensures the log cannot be altered after the fact
+3. **Integrity evidence**: signatures or hash chains can help detect modification
+   when keys, verification and retained checkpoints are independently protected
 
-The event log is **append-only**. Agents may not delete or modify past events — only append new events. This design means a compromised agent cannot cover its tracks by deleting audit records.
+A production log should restrict agents to append operations and protect retention
+independently. An in-memory list or an append-only application API alone cannot
+prevent an administrator or compromised storage credential from altering records.
 
 ```python
 # Every agent action produces an immutable event
@@ -404,7 +406,7 @@ event_store.append(AgentEvent(
     resource_id="ticket-4821",
     arguments={"status": "resolved", "resolution": "..."},
     result="success",
-    signature=sign(agent_key, payload),  # cryptographic non-repudiation
+    signature=sign(agent_key, payload),  # illustrative; signing/storage are not supplied
 ))
 ```
 
@@ -412,27 +414,19 @@ event_store.append(AgentEvent(
 
 ## 6. Multi-Agent Trust Architecture
 
-### The 2026 Trust Gap
+### Agent-to-Agent Trust Boundaries
 
-In 2026, multi-agent systems — where orchestrator agents spawn and direct subagents — are production-deployed but have **no established security protocol for agent-to-agent communication**. This is the largest unresolved security gap in the agentic AI landscape.
+A multi-agent deployment must authenticate both services, restrict delegated
+authority and protect messages in transit. Those controls are deployment choices;
+communication on a local or private network does not establish them automatically.
+Do not trust an agent's role or capability claims merely because they appear in a
+message body.
 
-HTTP-based human-to-service communication has decades of security infrastructure: TLS, OAuth2, CSRF tokens, CSP headers. Agent-to-agent communication has none of these by default. Messages between agents are typically:
+### Example Design: mTLS and Scoped Delegation
 
-- Unencrypted (if agents communicate on the same host or within a trusted network boundary)
-- Unsigned (no proof the message came from a legitimate orchestrator)
-- Unverifiable (the subagent has no way to confirm the orchestrator's identity or authorization)
-
-### NIST AI Agent Standards Initiative
-
-The NIST AI Agent Standards Initiative began work in late 2025 on agent identity infrastructure. The working group's current draft (Q1 2026) proposes:
-
-- **Agent identity certificates**: X.509-style certificates issued to agent instances, binding agent identity to a public key
-- **Capability attestation**: cryptographically signed statements of what an agent is authorized to do, issued by a trust authority
-- **Agent registry**: a directory service for agent identity verification, analogous to DNS for hostnames
-
-Until NIST standards are finalized and adopted, the current best practice is:
-
-### Current Best Practice: mTLS + Message Signing + Capability Attestation
+The following is a proposed application design, not a NIST draft or a protocol
+implemented by this repository. Verify trusted issuers, audience, freshness and
+replay resistance; limit delegated permissions to the caller's own authority.
 
 ```
 Orchestrator Agent                    Subagent
@@ -484,7 +478,7 @@ next_action = llm.parse(result.message)  # attacker controls result.message
 # Secure: orchestrator uses typed, structured results
 result: TaskResult = subagent.execute(task)
 # result.status, result.data — structured fields, no natural language interpretation
-assert isinstance(result, TaskResult)
+validate_result(result)  # runtime schema validation, not a Python assert security gate
 next_action = determine_next_action(result.status, result.data)
 ```
 
@@ -494,7 +488,9 @@ next_action = determine_next_action(result.status, result.data)
 
 ### Pydantic AI: Type-Safe Tool Definitions
 
-Pydantic AI enforces typed tool parameter schemas at the Python type system level, not just at runtime validation. By defining tool inputs as Pydantic models, injection attacks that pass non-string types where strings are expected are rejected before the tool executes:
+[Pydantic field validators](https://docs.pydantic.dev/latest/concepts/validators/)
+perform runtime validation. The example below checks identifier syntax only; it
+does not demonstrate a complete Pydantic AI tool or database authorization boundary:
 
 ```python
 from pydantic import BaseModel, field_validator
@@ -507,42 +503,45 @@ class QueryToolInput(BaseModel):
 
     @field_validator("table", "filter_field")
     @classmethod
-    def no_sql_injection(cls, v: str) -> str:
-        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", v):
+    def valid_identifier(cls, v: str) -> str:
+        if not re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", v):
             raise ValueError(f"Invalid identifier: {v!r}")
         return v
 ```
 
-Schema-level validation prevents the class of injection attacks where malicious content is embedded in what appears to be a normal string argument.
+A valid identifier can still name an unauthorized table. Apply an allowlist and
+record-level authorization, and bind `filter_value` as a query parameter. These
+validators do not establish that arbitrary strings are safe SQL or trusted instructions.
 
 ### LangGraph: Stateful Workflows with Human-in-the-Loop Gates
 
 LangGraph (LangChain's stateful workflow engine) natively supports human-in-the-loop interruption points. For high-risk operations, the workflow pauses and requires human confirmation before proceeding:
 
+The [LangGraph interrupt API](https://docs.langchain.com/oss/python/langgraph/interrupts)
+uses `interrupt()` and `Command(resume=...)` with a checkpointer and stable thread ID.
+In an application graph, the review node can return the approved decision:
+
 ```python
-from langgraph.graph import StateGraph
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import interrupt
 
-graph = StateGraph(AgentState)
-graph.add_node("analyze", analyze_node)
-graph.add_node("human_review", human_review_node)  # interruption point
-graph.add_node("execute_deletion", execute_deletion_node)  # dangerous action
-
-graph.add_edge("analyze", "human_review")
-graph.add_conditional_edges(
-    "human_review",
-    lambda state: "execute_deletion" if state["approved"] else "abort",
-)
-
-# Compile with interrupt — workflow pauses at human_review for external input
-app = graph.compile(checkpointer=MemorySaver(), interrupt_before=["execute_deletion"])
+def human_review_node(state):
+    decision = interrupt({"action": state["proposed_action"]})
+    return {"approved": decision is True}
 ```
 
-Human-in-the-loop gates are the most reliable defense against intent hijacking for irreversible actions. The human review step provides a verification layer that no automated control can fully replace.
+This is a node excerpt: wire a rejection branch, compile with a checkpointer and
+resume only from an authenticated approval service. `InMemorySaver` is useful for
+demos; use durable checkpoint storage for restart recovery. Nodes restart on resume,
+so keep irreversible effects after the approval boundary and make retries safe.
+Human review must display the actual action and destination, and remains one layer
+alongside authorization and destination restrictions.
 
 ### MCP Python SDK: Validate Before Trusting
 
-The official MCP Python SDK (`mcp` package) provides client and server implementations. Security guidance for the SDK:
+The [official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+provides client and server implementations. This application-wiring excerpt assumes
+a configured stdio server and an operator-reviewed registry. It is not a runnable
+client by itself. Empty permission lists must not be interpreted as read-only trust:
 
 ```python
 from mcp import ClientSession
@@ -562,16 +561,20 @@ async with stdio_client(server_params) as (read, write):
                     name=tool.name,
                     description=tool.description or "",
                     parameters=tool.inputSchema or {},
-                    permissions=[],
+                    permissions=approved_permissions[tool.name],  # operator-owned mapping; fail closed
                     source=server_url,
-                )
+                ),
+                expected_checksum=approved_digests[tool.name],
             ):
                 logger.warning("Tool rejected by security validator: %s", tool.name)
 ```
 
 ### FastAPI + OAuth2: Agent Identity and Scoped Token Patterns
 
-For agent-to-service communication where agents call REST APIs, FastAPI's OAuth2 integration with scoped tokens provides a practical capability-based authorization layer:
+[FastAPI OAuth2 scopes](https://fastapi.tiangolo.com/advanced/security/oauth2-scopes/)
+can declare required scopes. The application must verify the token signature,
+issuer, audience, expiry and granted scopes, then enforce resource access. This
+excerpt assumes `app`, `TokenData` and `get_current_agent` are defined by that application:
 
 ```python
 from fastapi import Depends, FastAPI, Security
@@ -593,21 +596,24 @@ async def resolve_ticket(
     ...
 ```
 
-Scoped tokens mean that a compromised agent token exposes only the permissions in that token's scope — not all permissions available to the agent's service account.
+A scope declaration alone does not enforce authorization. `get_current_agent` must
+validate the requested scopes; resource checks must also restrict the selected ticket.
 
 ---
 
 ## 8. Quick Reference: Threat Matrix
 
+Severity labels are illustrative review priorities, not measured prevalence or CVSS scores.
+
 | Threat | Vector | Severity | Defense |
 |--------|--------|----------|---------|
 | Malicious MCP server | Supply chain | Critical | Signed manifests, package allowlist |
-| Tool manifest injection | Command injection in description | High | Metadata validation, injection pattern scanning |
+| Tool manifest injection | Untrusted description steers model | High | Approved manifests and invocation authorization; scanning is heuristic |
 | Over-privileged tools | RBAC coarse-grained grants | High | Per-task permission scoping, capability model |
 | Typosquatting tool names | Ambiguous tool registry | High | Exact-match only, unambiguous naming |
 | Intent hijacking | Prompt injection via tool arguments | High | Intent verification, destination allowlists |
-| Incomplete saga compensation | Process crash during saga | Medium | Pre-registered compensations, event log |
-| Subagent confused deputy | Orchestrator trusts subagent claims | Medium | Typed return schemas, no NL interpretation |
+| Incomplete saga compensation | Process crash during saga | Medium | Durable recovery state, idempotent compensation, failure reconciliation |
+| Subagent confused deputy | Orchestrator trusts subagent claims | Medium | Validate structured data and independently authorize effects |
 | Credential centralization | Shared MCP config files | Medium | Per-server credential injection, secrets manager |
 | Audit log tampering | Compromised agent deletes events | Medium | Append-only log, cryptographic signing |
 | Sandbox escape (filesystem MCP) | Path traversal in MCP server | High | Container isolation, seccomp profiles |
@@ -618,16 +624,29 @@ Scoped tokens mean that a compromised agent token exposes only the permissions i
 
 ## Related Reference Implementations
 
-This library provides concrete Python implementations of the defensive patterns described above:
+These examples demonstrate selected local checks and data structures. They do not
+provide durable orchestration, cryptographically protected audit storage or complete
+authentication. Pseudocode involving `capability_manager`, `saga.register_step`,
+`AgentEvent` or `TaskResult` is conceptual application design, not an exported API.
+
+The production adapter in [`mcp_server.py`](../src/integration_automation_patterns/mcp_server.py)
+uses token verification and explicit permission checks. Its audit sink must acknowledge
+synchronously; async sinks and awaitable results are rejected. `MCPAuditDeliveryError`
+reports whether enqueue already committed. A post-commit audit failure requires
+reconciliation using the stable request key; it does not mean the enqueue rolled back.
+Bound audit and outbound I/O, and persist audit records with deployment-specific
+retention controls. The example registry's checksums and metadata scans are not a
+replacement for those controls.
 
 | Pattern | Example File | Classes |
 |---------|-------------|---------|
 | MCP security validation | `examples/42_mcp_security_patterns.py` | `MCPSecurityValidator`, `MCPToolRegistry`, `MCPInvocationGuard`, `MCPRateLimiter` |
-| Saga with guaranteed compensation | `examples/40_saga_choreography_patterns.py` | `SagaChoreographer`, `CompensatingTransaction` |
+| Saga compensation demonstration (in memory) | `examples/40_saga_choreography_patterns.py` | `SagaChoreographer`, `CompensationEngine` |
 | Rate limiting | `examples/37_rate_limiting_patterns.py` | `SlidingWindowRateLimiter`, `CircuitBreakerRateLimiter` |
-| Event sourcing (audit) | `examples/35_event_sourcing_advanced.py` | `EventStore`, `AuditEventLog` |
+| Event reconstruction (in memory) | `examples/35_event_sourcing_advanced.py` | `EventProjector`, `EventReplay`, `CausationChain`, `TemporalQuery` |
 | API versioning and contracts | `examples/41_api_versioning_patterns.py` | `APIContract`, `VersionRouter` |
 
 ---
 
-*Document version: 2026.1 | Last updated: April 2026 | Part of the `integration-automation-patterns` reference library*
+*Reviewed against repository 0.45 behavior and official references on 2026-11-01.
+External framework excerpts require their own installed-version checks.*

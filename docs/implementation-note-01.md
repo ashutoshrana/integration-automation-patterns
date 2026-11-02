@@ -17,8 +17,8 @@ Treat every inbound event as something that may be replayed.
 The implementation pattern is:
 1. validate the payload
 2. derive or read a stable external event identifier
-3. check whether that identifier has already been processed
-4. only then perform workflow or system-of-record updates
+3. atomically claim that identifier and apply local business changes in one transaction
+4. use the same identifier for remote effects whose outcome may be uncertain
 5. log the action and outcome in a way that can be inspected later
 
 ## Why it matters
@@ -44,5 +44,7 @@ For every integration-side action, capture:
 Do not allow transport retries to silently trigger business-state transitions a second time. If transport and workflow logic are coupled too closely, replay becomes indistinguishable from legitimate progress.
 
 ## Practical takeaway
+
+An in-memory check followed by a write does not close the concurrent-delivery or crash window. A database uniqueness constraint must be committed with the business effect; remote services need their own idempotency contract.
 
 Reliable enterprise integration is less about moving data and more about preserving confidence in what happened, what changed, and what can safely be retried.

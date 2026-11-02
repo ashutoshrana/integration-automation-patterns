@@ -1,5 +1,10 @@
 # Implementation Note 12: API Gateway Patterns — The Six Problems Every Production Gateway Must Solve
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`examples/14_api_gateway_patterns.py`](../examples/14_api_gateway_patterns.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 Every team that exposes a public API eventually builds the same six mechanisms from scratch, each time, slightly wrong. This note documents the problems, the tradeoffs, and the reference implementations in `14_api_gateway_patterns.py`.
 
 ---
@@ -34,7 +39,7 @@ The sliding window log records the timestamp of every request. On each request, 
 - No burst: the limit is enforced over any `window_ms` period, not just calendar windows
 - Higher memory: O(limit) timestamps per client
 
-The tradeoff: memory grows with the limit. For a 10,000 req/min limit per client, you store up to 10,000 timestamps. The fixed-window algorithm is O(1) but has a known 2× burst problem at window boundaries (requests pile up at the end of window N and start of window N+1).
+The tradeoff: memory grows with the limit. For a 10,000 req/min limit per client, you retain roughly 10,000 admitted-request timestamps. The fixed-window algorithm is O(1) but has a known 2× burst problem at window boundaries (requests pile up at the end of window N and start of window N+1).
 
 **Rule of thumb:** Use token bucket for user-facing APIs with legitimate bursts. Use sliding window for security-critical or billing-critical limits where the 2× burst artifact is unacceptable.
 
@@ -42,7 +47,7 @@ The tradeoff: memory grows with the limit. For a 10,000 req/min limit per client
 
 ## Problem 2: Circuit Breaker — Stop Amplifying Failures
 
-When a backend is slow or failing, clients retry. Retries make the backend slower. The backend fails harder. This is cascading failure, and it is the most common cause of site-wide outages.
+When a backend is slow or failing, clients retry. Retries make the backend slower. The backend fails harder. This can amplify a local failure into a wider outage; no outage-frequency estimate is implied.
 
 The circuit breaker stops it by refusing to forward requests to a failing backend for a timeout period, then probing with a single request to check for recovery.
 
@@ -73,7 +78,8 @@ A circuit breaker does not retry requests. It rejects them fast. The client rece
 
 When a popular resource expires from cache, every concurrent request for it hits the backend simultaneously. This is the thundering herd / cache stampede problem. The distributed lock approach (see Implementation Note 11) prevents stampede by having only one process fetch at a time. But the other processes still wait and then fetch again.
 
-Request coalescing is different: only the first request is forwarded to the backend. All others wait and receive the exact same result as the first request. The backend is called exactly once, regardless of how many concurrent requests arrive.
+Request coalescing is different: only the first request is forwarded to the backend. All others wait and receive the exact same result as the first request. The example aims to share an in-flight result within one process; it does not
+coordinate independent instances or durable effects.
 
 ### Implementation
 
@@ -167,11 +173,13 @@ The TTL should be at least as long as the client's retry window plus the client'
 - Client-side retry logic within minutes
 - Mobile apps that go offline and retry on reconnect (up to hours)
 
-A 30-minute TTL is insufficient for mobile clients. A 7-day TTL is safe for most applications but increases storage requirements.
+Choose retention from the actual retry horizon and storage budget. Requests after
+expiry may execute again; no fixed TTL is safe for every mobile or payment workflow.
 
 ### Idempotency Is Not Exactly-Once Delivery
 
-Idempotency prevents duplicate side effects when the client retries. It does not guarantee that the handler is called exactly once — in a distributed system, the handler may be called once on the first server and once on a second server before the idempotency store is written. For true exactly-once semantics, combine idempotency keys with transactional outbox patterns or distributed consensus.
+Idempotency prevents duplicate side effects when the client retries. It does not guarantee that the handler is called exactly once — in a distributed system, the handler may be called once on the first server and once on a second server before the idempotency store is written. A transactional outbox can retain delivery intent, but publication and remote effects
+remain at least once unless the destination atomically deduplicates them.
 
 ---
 
@@ -187,4 +195,4 @@ Idempotency prevents duplicate side effects when the client retries. It does not
 | Version lifecycle enforcement | Version Router | `sunset_at`, Sunset header |
 | Duplicate side effects from retries | Request Deduplicator | `ttl_ms`, client-provided key |
 
-None of these mechanisms are optional in a production API. The question is whether you implement them deliberately, with clear tradeoffs documented, or discover them one production incident at a time.
+Choose these mechanisms according to the API's traffic, authority and failure model. The question is whether you implement them deliberately, with clear tradeoffs documented, or discover them one production incident at a time.

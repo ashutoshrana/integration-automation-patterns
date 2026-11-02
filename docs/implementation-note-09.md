@@ -1,18 +1,26 @@
 # Implementation Note 09: Process Manager Pattern for Distributed Transaction Coordination
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`examples/11_process_manager.py`](../examples/11_process_manager.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 ## Problem
 
-The Saga pattern (see `05_order_fulfillment_saga.py`) handles **linear** sequences of compensating transactions: each step has exactly one successor and one compensation. But real enterprise workflows are rarely linear. An order fulfillment process might branch based on stock location, pause for manual approval at certain order values, or conditionally skip steps based on customer tier. Sagas express none of this — a saga is a chain, not a graph.
+The saga reference (see [`03_saga_compensation.py`](../examples/03_saga_compensation.py))
+illustrates compensating steps. A process manager makes step state, checkpoints and
+compensation records explicit. More complex production workflows may also need
+branching and external approvals; this example executes an ordered step list.
 
 A Process Manager solves the coordination problem that a Saga cannot:
 
 | Concern | Saga | Process Manager |
 |---------|------|----------------|
-| Step sequencing | Fixed linear chain | Explicit state machine (supports branching) |
+| Step sequencing | Example-specific | Ordered list with explicit execution state |
 | Compensation ordering | Implicit (reverse chain) | Explicit LIFO registry |
-| Crash recovery | Restart from beginning | Resume from last checkpoint |
+| Crash recovery | Requires retained state | Resume from a caller-retained checkpoint |
 | SLA enforcement | External responsibility | Built-in per-step timeout detection |
-| Audit trail | Application-level | Structural, SOX/audit-ready |
+| Audit trail | Application-level | Structured application records; caller persists |
 
 ## Architecture
 
@@ -22,7 +30,7 @@ ProcessManager
     ├── CompensatingTransactionRegistry  ← LIFO stack of completed forward steps
     │   └── CompletedStepRecord          ← step + result + idempotency key
     │
-    ├── ProcessCheckpoint                ← durable snapshot for crash recovery
+    ├── ProcessCheckpoint                ← serializable snapshot; caller supplies persistence
     │   └── (written before each step)
     │
     └── ProcessManagerAuditRecord        ← complete forward + compensation log
@@ -80,13 +88,14 @@ if elapsed > step.timeout_seconds:
 The `now_fn` parameter is injectable for deterministic tests:
 
 ```python
-clock = iter([0.0, 100.0])             # second call returns 100 seconds later
+from itertools import count
+clock = count(start=0.0, step=100.0)  # enough ticks for all manager clock calls
 manager = ProcessManager("t", steps, now_fn=lambda: next(clock))
 ```
 
 ## Checkpoint Design
 
-A checkpoint is written **before** each step execution:
+A checkpoint is assigned to the supplied dictionary **before** each step execution:
 
 ```
 Step 0: write checkpoint {next_step_index=0}  → execute step 0
@@ -96,19 +105,16 @@ Step 1: write checkpoint {next_step_index=1}  → execute step 1
 
 If the process crashes during step 1's execution, the checkpoint at `next_step_index=1` allows resumption at step 1. Combined with idempotency keys, re-executing step 1 is safe — the downstream system returns the same result for the same key.
 
-**At-most-once semantics require idempotency:** the checkpoint guarantees at-most-once *checkpoint advance*, but step re-execution is possible on resume. Steps must be idempotent, or the system must check whether the step completed before the crash.
+**Checkpointing is not an at-most-once guarantee:** the example stores snapshots in an
+in-memory dictionary. Persisting and restoring them is the application's responsibility;
+a crash can lose the dictionary and step re-execution is possible on resume. Steps must be idempotent, or the system must check whether the step completed before the crash.
 
 ```python
 # Resume restores the registry from checkpoint snapshot
 # so that if the resumed execution fails, LIFO compensation
 # correctly covers all steps (including pre-crash ones).
-checkpoint = ProcessCheckpoint(
-    next_step_index=2,
-    registry_snapshot=[
-        {"step_id": "s0", "action_result": {...}, ...},
-        {"step_id": "s1", "action_result": {...}, ...},
-    ],
-)
+# Load an existing complete checkpoint from the application's persisted snapshot.
+checkpoint = ProcessCheckpoint.from_dict(saved_checkpoint_data)
 audit = manager.resume_from_checkpoint(checkpoint)
 ```
 
@@ -122,7 +128,8 @@ The `ProcessManagerAuditRecord` captures:
 - **Compensation log:** step ID, name, outcome, duration
 - **Process metadata:** process ID, type, final state, started/finished timestamps, duration
 
-For SOX compliance, the compensation log must be retained separately from the forward log — auditors need to reconstruct exactly which compensating transactions were executed and in what order.
+Retain forward and compensation outcomes with separate labels so reviewers can
+reconstruct their order. This example does not establish SOX compliance.
 
 For FAR (US Federal Acquisition Regulation) and ITAR compliance, the process ID and idempotency keys are the correlation handles between the Process Manager log and the downstream service receipts.
 
@@ -143,7 +150,8 @@ Inject `now_fn` to avoid real sleeps in timeout tests:
 
 ```python
 # Simulates an 8-second elapsed time on the second clock call
-t = iter([0.0, 8.0])
+from itertools import count
+t = count(start=0.0, step=8.0)
 manager = ProcessManager("t", [sla_2s_step], now_fn=lambda: next(t))
 audit = manager.execute(ctx)
 assert audit.timed_out_steps == 1

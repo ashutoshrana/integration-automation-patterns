@@ -1,8 +1,13 @@
 # Implementation Note 06 — Approval Workflows in Enterprise Integration: When Human Decision Is a First-Class Event
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`examples/08_approval_workflow.py`](../examples/08_approval_workflow.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 **Repo:** `integration-automation-patterns`
 **Relates to:** [`examples/08_approval_workflow.py`](../examples/08_approval_workflow.py)
-**ADR cross-reference:** [ADR-002 (saga boundaries)](adr/002-saga-boundaries.md), [ADR-003 (orchestration vs. integration boundaries)](adr/003-orchestration-vs-integration-boundaries.md)
+**ADR cross-reference:** [ADR-003 (saga choreography vs. orchestration)](adr/003-saga-choreography-vs-orchestration.md), [ADR-003 (orchestration vs. integration boundaries)](adr/003-orchestration-vs-integration-boundaries.md)
 
 ---
 
@@ -18,7 +23,7 @@ This sounds simple. In practice it breaks in several consistent ways:
 
 **Failure mode 3: Multi-approver quorum is implicit.** The system sends requests to all approvers and checks `COUNT(approved) >= quorum` in the decision query. But partial decisions (two of three approved) are not a real intermediate state — they have no API representation, no SLA tracking, no audit record. When an approver changes their decision, the behavior is undefined.
 
-**Failure mode 4: The workflow is sequential but the audit trail is flat.** SOX Section 404 and FAR 15.406 require that each approval step — who approved, what they were shown, when they decided, whether the SLA was met — is an independently reproducible record. A flat "approved_by" column does not satisfy this requirement.
+**Failure mode 4: The workflow is sequential but the audit trail is flat.** Audit reviewers may need to reconstruct each approval step: who decided, what they saw, when they decided and whether the SLA was met. A flat "approved_by" column loses this context; this example does not establish legal compliance.
 
 The structural fix is the same in all four cases: **make the approval gate a first-class object** with its own identity, SLA clock, escalation policy, and decision record.
 
@@ -26,24 +31,28 @@ The structural fix is the same in all four cases: **make the approval gate a fir
 
 ## The approval gate as a state machine
 
-Every approval gate has three terminal states: `APPROVED`, `REJECTED`, `TIMED_OUT`. It has one non-terminal state: `PENDING`. The state transition logic is:
+Every approval gate has three terminal states: `APPROVED`, `REJECTED`, `TIMEOUT`. It has one non-terminal state: `PENDING`. The state transition logic is:
 
 ```
 PENDING → APPROVED   (approver submits positive decision before SLA deadline)
 PENDING → REJECTED   (approver submits negative decision at any time)
-PENDING → TIMED_OUT  (decision not received before SLA deadline)
-TIMED_OUT → (escalation handler called)
+PENDING → TIMEOUT  (decision not received before SLA deadline)
+TIMEOUT → (escalation handler called)
 ```
 
-The critical design constraint: **the gate must not advance to TIMED_OUT silently.** When timeout occurs, an escalation function is called immediately. The escalation function decides what happens next — it might create a new gate with a different approver, log a compliance event, or raise an exception that terminates the workflow. This keeps timeout handling co-located with the gate definition, not scattered across cron jobs.
+This diagram describes desired workflow outcomes. `ApprovalGate` itself calls a
+synchronous decision callback and records whether `decided_at` meets the deadline;
+it does not wait for external events or run a timer. `ApprovalWorkflow` handles
+`TIMEOUT` outcomes and can call the gate's zero-argument escalation factory.
 
 ```python
+# Load ApprovalGate from examples/08_approval_workflow.py (not a package export).
 gate = ApprovalGate(
     step_name="legal_review",
     approver_id="legal_team",
     sla_hours=48,
-    escalation_fn=lambda ctx, decision: (
-        send_escalation_alert(ctx, decision, escalate_to="general_counsel")
+    escalation_fn=lambda: ApprovalGate(
+        step_name="escalated_legal_review", approver_id="general_counsel", sla_hours=24
     ),
 )
 ```
@@ -56,7 +65,7 @@ When a workflow step requires N-of-M approvals (budget approval requiring two of
 
 1. Track each individual decision independently with its own `ApprovalDecision` record
 2. Determine the final outcome (`APPROVED` when quorum is reached, `REJECTED` when enough rejections to make quorum impossible) without waiting for all approvers
-3. Collect remaining decisions up to SLA deadline even if outcome is already known (for audit completeness)
+3. Short-circuit when quorum is reached or impossible; record remaining approvers as `SKIPPED`
 4. Report the final outcome and all individual decisions in a single `ApprovalAuditRecord`
 
 The quorum short-circuit rule for rejection: if `(total_approvers - rejections_so_far) < quorum`, the quorum is mathematically impossible. The gate should return `REJECTED` immediately rather than waiting for the remaining approvers.
@@ -73,21 +82,22 @@ For a 2-of-3 quorum:
 An `ApprovalWorkflow` is a sequential saga where each step is either an `ApprovalGate` or a `QuorumApprovalGate`. The orchestrator:
 
 1. Executes gates in order, passing the same `context` object to each
-2. Stops immediately on the first `REJECTED` or `TIMED_OUT` outcome
+2. Stops immediately on the first `REJECTED` or `TIMEOUT` outcome
 3. Collects a decision record for each completed gate
 4. Returns a single `ApprovalAuditRecord` covering the entire workflow
 
-The stop-on-first-rejection rule is the correct default for compliance workflows. SOX and FAR workflows do not "continue and override" a legal review rejection — the workflow terminates, the rejection is recorded, and the initiator must restart with a revised request.
+This example chooses a stop-on-first-rejection policy: the workflow terminates and records the rejection. A revised request starts a new workflow. This is an application design choice, not a universal SOX or FAR requirement; production rejection and escalation rules must reflect the organization's approved policy and applicable obligations.
 
-For workflows where a rejection at one step should escalate to a higher step (rather than terminate), this is modeled as **a new workflow** with a different gate configuration, not as a bypass flag on the original workflow. This keeps the audit trail clean: the original rejection is immutable, and the escalated workflow has its own identity.
+For workflows where a rejection at one step should escalate to a higher step (rather than terminate), this is modeled as **a new workflow** with a different gate configuration, not as a bypass flag on the original workflow. This keeps the audit trail clean: the original rejection is retained, and the escalated workflow has its own identity.
 
 ---
 
-## The `ApprovalAuditRecord`: what SOX and FAR require
+## The `ApprovalAuditRecord`: suggested review fields
 
-SOX Section 404 and FAR Subpart 15.4 both require that approval records be independently reproducible without reference to application state. This means the audit record must be self-contained:
+Use a self-contained snapshot when reviewers need to reconstruct approval context.
+The following fields are design choices in this example, not a statutory checklist:
 
-| Field | Why it's required |
+| Field | Review purpose |
 |---|---|
 | `workflow_id` | Correlates the record to the business transaction; must survive application restarts |
 | `workflow_name` | Human-readable identifier for the audit reviewer |
@@ -97,7 +107,8 @@ SOX Section 404 and FAR Subpart 15.4 both require that approval records be indep
 | `total_sla_met` | Whether the workflow-level SLA was met (not just individual gate SLAs) |
 | `initiated_at` / `completed_at` | Full wall-clock duration for process analytics and SLA reporting |
 
-The key constraint: **none of these fields should be computed from live application state at audit time.** The `ApprovalAuditRecord` is written once when the workflow completes and never modified.
+The key constraint: **none of these fields should be computed from live application state at audit time.** The workflow returns an `ApprovalAuditRecord`; the application must persist it and
+enforce retention and access controls. The Python object is mutable.
 
 ---
 
@@ -107,11 +118,11 @@ In a full enterprise integration pipeline, an approval workflow is typically emb
 
 **Before the approval workflow:** The saga has already validated the request and written a "pending approval" record to the database via the transactional outbox. If the system crashes before the approval workflow starts, the outbox record ensures the approval request is re-emitted.
 
-**During the approval workflow:** No database mutations. The approval gate state is held in memory (or in a dedicated approval workflow state store if the workflow spans multiple JVM instances). Approval decisions arrive as external events.
+**During the approval workflow:** No database mutations. The approval gate state is held in memory (or in a dedicated approval workflow state store if the workflow spans multiple Python processes). Approval decisions arrive as external events.
 
-**After the approval workflow:** If the final outcome is `APPROVED`, the saga resumes its next compensatable step. If the final outcome is `REJECTED` or `TIMED_OUT`, the saga executes its compensation chain.
+**After the approval workflow:** If the final outcome is `APPROVED`, the saga resumes its next compensatable step. If the final outcome is `REJECTED` or `TIMEOUT`, the saga executes its compensation chain.
 
-The handoff between the approval workflow and the saga is an event: `ApprovalWorkflowCompletedEvent` containing the `ApprovalAuditRecord`. The saga subscribes to this event type, looks up the correlation ID, and resumes.
+A production handoff can use an application-defined event: `ApprovalWorkflowCompletedEvent` containing the `ApprovalAuditRecord`. The saga subscribes to this event type, looks up the correlation ID, and resumes.
 
 ---
 
@@ -138,18 +149,25 @@ The deterministic-time injection pattern (`now` parameter on `request_approval`)
 The pattern:
 
 ```python
-# Production use: no 'now' — gate uses datetime.now(UTC)
-decision = gate.request_approval(context, approver_fn)
-
-# Test use: inject a time after SLA deadline to trigger timeout
-decision = gate.request_approval(
-    context,
-    approver_fn,
-    now=datetime.now(UTC) + timedelta(hours=49),  # past 48hr SLA
-)
-assert decision.outcome == ApprovalOutcome.TIMED_OUT
+from datetime import datetime, timedelta, timezone
+UTC = timezone.utc
+# ApprovalDecision and ApprovalOutcome come from the same example module.
+# decision_fn returns the actual decision timestamp; now sets the request start.
+started = datetime(2026, 1, 1, tzinfo=UTC)
+def late_decision(gate, context):
+    return ApprovalDecision(
+        approver_id=gate.approver_id,
+        outcome=ApprovalOutcome.TIMEOUT,
+        decided_at=started + timedelta(hours=49),
+        reason="No decision within SLA",
+    )
+decision = gate.request_approval({}, late_decision, now=started)
+assert decision.outcome == ApprovalOutcome.TIMEOUT
 assert not decision.sla_met
 ```
+
+`ApprovalOutcome.TIMEOUT` is the gate enum; the workflow-level terminal status is
+`WorkflowStatus.TIMED_OUT`.
 
 This keeps the SLA clock logic inside the gate (not in the test) while making it fully exercisable without sleeping.
 
@@ -157,6 +175,6 @@ This keeps the SLA clock logic inside the gate (not in the test) while making it
 
 ## What this pattern does not cover
 
-- **Persistent approval state across JVM restarts:** The `ApprovalGate` holds state in memory. For workflows that span hours or days, a durable state store (Camunda, Temporal, AWS Step Functions) is required. The pattern in this example is the domain model — the state store provides the persistence layer.
+- **Persistent approval state across Python restarts:** The `ApprovalGate` holds state in memory. For workflows that span hours or days, a durable state store (Camunda, Temporal, AWS Step Functions) is required. The pattern in this example is the domain model — the state store provides the persistence layer.
 - **Approval request UI:** Generating approval request emails, Slack messages, or ServiceNow tickets is outside the gate's responsibility. The gate calls a decision function; the caller is responsible for wiring that function to the actual approval channel.
 - **Concurrent approval decisions from the same approver:** The quorum gate does not de-duplicate multiple decisions from the same approver. In production, the approval channel should enforce one-decision-per-approver before calling `request_approvals`.

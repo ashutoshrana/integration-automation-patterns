@@ -1,5 +1,10 @@
 # Implementation Note 04 — Observability and Recovery for Enterprise Integration
 
+Example scope: snippets below include application wiring and internal excerpts from
+[`src/integration_automation_patterns/event_envelope.py`](../src/integration_automation_patterns/event_envelope.py); undefined names are supplied by that example or the application.
+They are not standalone package APIs. See the linked module for complete setup.
+
+
 **Series:** integration-automation-patterns  
 **Topic:** Operational metrics, failure classification, and replay-safe recovery  
 **Status:** Published 2026-04-13
@@ -146,17 +151,18 @@ Classify each message as Class 1, 2, or 3. Group by failure reason.
 
 ### Step 3: Replay Class 1 failures
 
-Class 1 failures are safe to replay — the event is valid and the downstream
+Class 1 failures are candidates for replay once the outcome of any partial effect
+is reconciled. The event is valid and the downstream
 is now healthy. Because consumers are idempotent (event_id deduplication),
 replaying a previously processed event is safe.
 
 ```python
 # In production: re-enqueue to processing queue, not DLQ
-# The consumer's ProcessedEventStore will skip already-processed events
+# Conceptual consumer loop; transactionally deduplicate business effects
 for event in dlq_class1_events:
     assert event.event_id  # must have idempotency key
     queue.send(event)
-    # Consumer will check ProcessedEventStore before processing
+    # Consumer must commit its inbox key and local business effect together
 ```
 
 **Never replay Class 2 or 3 without fixing the root cause first.**
@@ -198,8 +204,9 @@ logger.error("event.dead_lettered", extra={
 })
 ```
 
-The `to_audit_line()` output includes: `event_id`, `event_type`, `source_system`,
-`status`, `attempt_count`, `correlation_id`, and `dispatched_at`. This is enough
+The `to_audit_line()` string includes `event_id`, `type`, `source`, `status`,
+`attempts`, `correlation`, `schema`, and `created`. `created` is the event's
+creation time; add a separate log timestamp for each transition. This is enough
 to reconstruct the event's history without reading the original message payload.
 
 ---
@@ -228,3 +235,41 @@ pod restart. Investigation time: 10 minutes instead of 3 hours.
 - `examples/05_idempotent_crm_update.py` — idempotent CRM update with DLQ path
 - ADR 001 — idempotency key design
 - Implementation Note 02 — idempotency in event processing
+
+## Replay engine boundary (source checkout 0.45)
+
+This section describes source commit `77cf91fdafed60bbe86092a1b5d1a53f37e42be1`, not the older published 0.44.2
+package. To reproduce, install this repository checkout with `python -m pip install .`
+from that revision. No package release is implied.
+
+`EventReplayEngine` is exported at package level. The optional durable marker store
+is imported from its module:
+
+```python
+from integration_automation_patterns import EventReplayEngine
+from integration_automation_patterns.event_replay import SQLiteReplayStore
+
+# Application-supplied outbox/publisher; illustrative wiring, not a standalone runner.
+engine = EventReplayEngine(
+    outbox=outbox,
+    publisher=publisher,
+    idempotency_store=SQLiteReplayStore("replay-markers.sqlite3"),
+    concurrency=5,
+)
+```
+
+The default markers live in memory and reset on restart; claims serialize matching
+events within one engine. The opt-in store uses a dedicated SQLite file, separate
+from the business/outbox database, and serializes publishers across runners using
+that file. Lock acquisition is bounded at 30 seconds. Bound publisher and
+acknowledgment I/O too; concurrency limits do not impose timeouts.
+
+Publication is marked complete before `mark_processed(event)` acknowledges the
+outbox. An acknowledgment exception increments `failed` and records an error; a
+later replay retries acknowledgment without republishing a completed marker.
+`replayed` and `skipped` count successful acknowledgment paths. Inspect failures
+and confirm the final business record before declaring recovery complete.
+
+A crash after external publication but before marker commit can still redeliver:
+this remains at-least-once delivery. Consumers must atomically deduplicate their
+own business effects; the marker store does not provide exactly-once remote calls.

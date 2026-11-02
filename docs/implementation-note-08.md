@@ -50,7 +50,11 @@ The semantic version contract for event schemas:
 
 - **Major version increment** (v1.x → v2.0): breaking changes allowed. Cross-major-version reads require an explicit `EventMigrator` mapping. No consumer should receive v2.0 events without either deploying to v2.0 or being served a migrated event via `MultiVersionFanout`.
 
-This is the contract that prevents the `amount` → `amount_usd` incident: renaming a field requires a major version bump, which forces the migration mapping to be written before the change ships.
+This is a design contract, not an enforced compatibility proof. `SchemaVersion`
+compares version numbers, and `SchemaRegistry.register()` stores the supplied schema
+without comparing field changes to prior versions. `EventSchema.validate()` checks
+required field presence, not declared types or value constraints. Add compatibility
+checks before release; a minor version alone does not prove either read direction.
 
 ---
 
@@ -76,7 +80,9 @@ The step-by-step chain has several advantages:
 
 3. **Rollback is cleaner.** If v2.0 is rolled back, the intermediate migration steps are still valid.
 
-The `EventMigrator` uses BFS to find the shortest migration path from source to target, so callers need not know the intermediate steps.
+The `EventMigrator` uses BFS to find a shortest registered migration path.
+A direct source-to-target migration is valid if registered; intermediate steps are
+a useful maintenance choice, not an API requirement.
 
 ---
 
