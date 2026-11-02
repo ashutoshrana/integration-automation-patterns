@@ -56,6 +56,8 @@ EventEnvelope (event_id, idempotency_key, source, schema_version)
 
 ## Installation
 
+Use a maintained Python 3.11+ runtime for production. Python 3.10 core compatibility remains available as legacy support.
+
 ```bash
 pip install integration-automation-patterns
 ```
@@ -396,3 +398,5 @@ Delivery remains at least once; consumers must deduplicate business effects in t
 own transaction. SQLite coordinates runners using the same supported local database
 file; this does not establish distributed filesystem or broker exactly-once semantics.
 Transaction behavior follows the [SQLite transaction reference](https://sqlite.org/lang_transaction.html).
+
+Individual publisher cancellation propagates from `EventReplayEngine.replay()`; it is not returned as a clean zero-failure summary. A cancelled durable claim can be retried. Cancellation cannot undo an external effect already started; downstream idempotency and bounded publication I/O remain required.
