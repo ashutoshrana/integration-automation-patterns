@@ -366,3 +366,33 @@ SDK's HTTP layer. Configure issuer key rotation/revocation and HTTPS at deployme
 `examples/42_mcp_security_patterns.py` remains an educational manifest-checking
 example, separate from this authenticated server. Its digest is not a signature;
 trusted expected digests must be supplied independently.
+
+
+### Durable event replay
+
+Since 0.45.0, `EventReplayEngine` accepts `SQLiteReplayStore` as its optional `idempotency_store`:
+
+```python
+from integration_automation_patterns.event_replay import EventReplayEngine, SQLiteReplayStore
+
+engine = EventReplayEngine(outbox, publisher, idempotency_store=SQLiteReplayStore("replay.sqlite"))
+result = await engine.replay()
+```
+
+Independent runners must share this same durable database. It serializes publication
+with a SQLite write transaction, waiting at most 30 seconds for a claim. Use a dedicated
+replay database, separate from the outbox and publisher databases, and set bounded I/O
+timeouts on publishers. The default in-memory set remains scoped to its engine and
+resets on restart. Existing external sets also recognize the exact legacy repr-based
+marker for the input event and add its canonical key. Legacy nested-dictionary ordering
+remains significant during migration: preserve the original ordering or migrate markers
+from original events before replaying reordered historical payloads. Keys hash canonical JSON event ID, event type and payload; events
+require a nonempty ID and JSON-serializable payload. Changing a payload changes its key.
+
+Publication success is recorded before outbox acknowledgment, so an acknowledgment
+failure can be retried after restart without republishing. A process crash after an
+external publish but before the durable marker commits can still cause redelivery.
+Delivery remains at least once; consumers must deduplicate business effects in their
+own transaction. SQLite coordinates runners using the same supported local database
+file; this does not establish distributed filesystem or broker exactly-once semantics.
+Transaction behavior follows the [SQLite transaction reference](https://sqlite.org/lang_transaction.html).

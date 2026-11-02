@@ -6,6 +6,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.45.0] — Unreleased
+
+- Add opt-in `SQLiteReplayStore` for replay markers shared across independent runners and retained across restarts; the default remains in memory.
+- Serialize publication claims and retain successful publication before retrying a failed outbox acknowledgment; preserve legacy marker recognition.
+- Delivery remains at least once: a crash between remote publication and local marker commit can redeliver, so consumers must deduplicate their business effects.
+
 ## [0.44.2] — 2026-09-20
 
 - Add a stdlib failure-contract harness for process crashes, replay, remote commit/lost response, confirmed SQLite lock contention and backlog allocation.
