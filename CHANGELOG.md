@@ -8,6 +8,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.46.0] — Unreleased
 
+- Raise optional Kafka, JWT, FastAPI/Starlette and HTTPX security floors; require patched test tooling. Keep the MCP v1 adapter boundary explicit; the current stateless protocol requires a separate migration.
 - Propagate individual publisher cancellation instead of returning an unaccounted clean replay summary; preserve outer cancellation, retryable acknowledgments and durable claim rollback.
 - Keep at-least-once delivery across remote publication and local marker commit; consumers still own idempotent external effects.
 - Recommend a maintained Python 3.11+ production runtime while retaining legacy Python 3.10 core compatibility.

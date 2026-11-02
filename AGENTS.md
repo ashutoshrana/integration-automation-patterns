@@ -24,3 +24,4 @@
 | Release roundtrip accepts substituted files with matching version metadata | Identity checks omit exact distribution bytes | Verify the retained artifact checksum manifest after download and again before OIDC publication |
 
 | A cancelled publisher leaves a clean replay summary with no accounted event | gather collected child cancellation while replay discarded its result list | Propagate collected child failures/cancellation and test both child and outer cancellation with durable retry and no premature acknowledgment |
+| A current SDK install scans clean while its advertised dependency minimum is affected | Only the latest resolved graph was audited | Raise compatible dependency floors and qualify exact minimum plus current full graphs without advisory ignores |
