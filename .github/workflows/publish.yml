@@ -47,5 +47,12 @@ jobs:
           python -m venv "$RUNNER_TEMP/release-wheel"
           "$RUNNER_TEMP/release-wheel/bin/python" -m pip install --no-deps dist/*.whl
           python scripts/check_release.py --tag "$RELEASE_TAG" --dist dist --installed-python "$RUNNER_TEMP/release-wheel/bin/python"
+      - name: Verify clean installed sdist and dependency consistency
+        run: |
+          python -m venv "$RUNNER_TEMP/release-sdist"
+          "$RUNNER_TEMP/release-sdist/bin/python" -m pip install --no-deps dist/*.tar.gz
+          python scripts/check_release.py --tag "$RELEASE_TAG" --dist dist --installed-python "$RUNNER_TEMP/release-sdist/bin/python"
+          "$RUNNER_TEMP/release-wheel/bin/python" -m pip check
+          "$RUNNER_TEMP/release-sdist/bin/python" -m pip check
       - name: Publish validated artifacts to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
