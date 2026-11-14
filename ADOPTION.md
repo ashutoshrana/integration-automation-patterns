@@ -2,14 +2,14 @@
 
 ## PyPI Downloads
 
-Verified via [pypistats.org](https://pypistats.org/packages/integration-automation-patterns) — independent third-party statistics.
+Historical download figures recorded from [pypistats.org](https://pypistats.org/packages/integration-automation-patterns).
 
 | Week of | Downloads |
 |---------|-----------|
 | 2026-04-13 | ~2,374 |
 | 2026-04-20 | ~2,079 |
 
-Downloads are organic — no self-installs, no promotional campaigns.
+Download events do not establish unique users, independent adoption, or production installations. [PyPI Stats](https://pypistats.org/faqs) includes automated CI/CD downloads. As of 2026-11-14, pypistats reports 372 downloads in the last month (mirrors excluded).
 
 ## How It Is Used
 
